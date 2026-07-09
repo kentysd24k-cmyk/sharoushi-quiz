@@ -5,8 +5,8 @@ pdf/
 __pycache__/
 *.pyc
 
-# Claude Code のローカル設定(実行環境固有のパーミッション許可リストなど)
-.claude/settings.local.json
+# Claude Code のローカル実行環境固有の状態一式(パーミッション許可リスト、ロックファイル等)
+.claude/
 
 # OS固有ファイル
 .DS_Store
