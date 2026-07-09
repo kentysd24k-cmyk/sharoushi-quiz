@@ -1,0 +1,16 @@
+# Cloudflare Workers静的アセットとして公開しないファイル/フォルダ。
+# .gitignore と同じ書式。ここに書かないと、リポジトリ内の全ファイルが
+# デプロイ先URLからそのまま閲覧可能になってしまう(.git を含む!)。
+
+.git
+.gitignore
+.wrangler
+.claude
+
+# アプリの実行に不要な開発用ファイル(公開する必要がない)
+convert.py
+apply_explanations.py
+test.py
+explanations/
+README.md
+CLAUDE.md
