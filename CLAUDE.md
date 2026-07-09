@@ -30,3 +30,4 @@ const CACHE_VERSION = "v2"; // ← ファイルを変更したらここをイン
 - GitHubリポジトリは意図的に **Private** にしている。`questions.json` に試験問題の本文が含まれるため、リポジトリ自体は非公開にし、デプロイ済みの静的サイトのみを公開する方針。
 - `index.html` に `<meta name="robots" content="noindex, nofollow">` を設定済み。検索エンジンにインデックスされないようにするためで、削除しないこと。
 - `pdf/`(試験PDF原本)は `.gitignore` で除外している。
+- **`.assetsignore` は絶対に消さないこと。** Cloudflareの静的アセットデプロイ(`wrangler deploy`)は `.gitignore` を見ない。`.assetsignore` が無いと `.git/` フォルダの中身までそのまま公開URLから閲覧可能になり、Privateリポジトリの意味がなくなる(実際に事故が発生し復旧した経緯がある)。新しく除外したいファイル/フォルダができたら `.gitignore` と `.assetsignore` の両方に追記すること。
