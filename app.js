@@ -496,6 +496,9 @@ function cacheEls() {
     "statsOverall",
     "statsBySubject",
     "btnResetHistory",
+    "updateToast",
+    "btnUpdateNow",
+    "btnDismissUpdate",
   ];
   for (const id of ids) els[id] = document.getElementById(id);
 }
@@ -523,6 +526,41 @@ function bindEvents() {
   });
   els.btnRetryWrong.addEventListener("click", retryWrongFromSession);
   els.btnResetHistory.addEventListener("click", resetHistory);
+  els.btnUpdateNow.addEventListener("click", () => window.location.reload());
+  els.btnDismissUpdate.addEventListener("click", hideUpdateToast);
+}
+
+// ---------- Service Worker update detection ----------
+
+function showUpdateToast() {
+  els.updateToast.hidden = false;
+  requestAnimationFrame(() => els.updateToast.classList.add("show"));
+}
+
+function hideUpdateToast() {
+  els.updateToast.classList.remove("show");
+  setTimeout(() => {
+    els.updateToast.hidden = true;
+  }, 250);
+}
+
+function watchForServiceWorkerUpdate(registration) {
+  // 既に新しいバージョンが待機中の場合(このタブを開いたまま裏で更新が来ていた場合)
+  if (registration.waiting && navigator.serviceWorker.controller) {
+    showUpdateToast();
+  }
+
+  registration.addEventListener("updatefound", () => {
+    const newWorker = registration.installing;
+    if (!newWorker) return;
+    newWorker.addEventListener("statechange", () => {
+      // controller が既にある(=初回インストールではない)状態で新しいSWが
+      // installed になった場合のみ「更新あり」として通知する。
+      if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+        showUpdateToast();
+      }
+    });
+  });
 }
 
 async function init() {
@@ -556,7 +594,10 @@ async function init() {
   showScreen("screen-home");
 
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js").catch(() => {});
+    navigator.serviceWorker
+      .register("./sw.js")
+      .then((registration) => watchForServiceWorkerUpdate(registration))
+      .catch(() => {});
   }
 }
 

@@ -4,7 +4,7 @@
 // いずれかを変更したら、このバージョンを必ず上げること。
 // sw.js自体のバイト列が変わらないとブラウザは更新を検知せず、
 // 古いキャッシュが無期限に配信され続けてしまう。
-const CACHE_VERSION = "v9";
+const CACHE_VERSION = "v10";
 const CACHE_NAME = `srquiz-cache-${CACHE_VERSION}`;
 const APP_SHELL = [
   "./",
@@ -34,26 +34,47 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// questions.json は「解説の追記」等で内容が頻繁に更新されるため、
+// キャッシュファーストではなく network-first(オンライン時は常に最新を取得し、
+// オフライン時のみキャッシュにフォールバック)で配信する。
+function isQuestionsJson(req) {
+  return new URL(req.url).pathname.endsWith("/questions.json");
+}
+
+function networkFirst(req) {
+  return fetch(req)
+    .then((res) => {
+      if (res && res.ok) {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+      }
+      return res;
+    })
+    .catch(() => caches.match(req));
+}
+
+function cacheFirst(req) {
+  return caches.match(req).then((cached) => {
+    if (cached) return cached;
+
+    return fetch(req)
+      .then((res) => {
+        if (res && res.ok && res.type === "basic") {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+        }
+        return res;
+      })
+      .catch(() => {
+        if (req.mode === "navigate") return caches.match("./index.html");
+        return undefined;
+      });
+  });
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
 
-  event.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-
-      return fetch(req)
-        .then((res) => {
-          if (res && res.ok && res.type === "basic") {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => {
-          if (req.mode === "navigate") return caches.match("./index.html");
-          return undefined;
-        });
-    })
-  );
+  event.respondWith(isQuestionsJson(req) ? networkFirst(req) : cacheFirst(req));
 });
