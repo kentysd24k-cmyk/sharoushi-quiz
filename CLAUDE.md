@@ -23,3 +23,10 @@
 // sw.js
 const CACHE_VERSION = "v2"; // ← ファイルを変更したらここをインクリメント
 ```
+
+## デプロイについて
+
+- ホスティングは **Cloudflare Pages**。GitHubリポジトリ(`main`ブランチ)と連携しており、`git push` するだけで自動的に再デプロイされる(ビルドコマンドなし、公開ディレクトリはリポジトリ直下)。
+- GitHubリポジトリは意図的に **Private** にしている。`questions.json` に試験問題の本文が含まれるため、リポジトリ自体は非公開にし、デプロイ済みの静的サイトのみを公開する方針。
+- `index.html` に `<meta name="robots" content="noindex, nofollow">` を設定済み。検索エンジンにインデックスされないようにするためで、削除しないこと。
+- `pdf/`(試験PDF原本)は `.gitignore` で除外している。
