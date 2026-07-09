@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>社労士 過去問クイズ</title>
+<meta name="description" content="社会保険労務士試験 択一式過去問クイズ（オフライン対応）">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0d9488">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="社労士クイズ">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <button id="btnBack" class="icon-btn" hidden aria-label="戻る">←</button>
+  <h1 id="headerTitle">社労士 過去問クイズ</h1>
+  <button id="btnHeaderStats" class="icon-btn" aria-label="成績">📊</button>
+</header>
+
+<main id="app">
+
+  <!-- 科目選択画面 -->
+  <section id="screen-home" class="screen active">
+    <p class="lead">年度と科目を選んで学習を始めましょう</p>
+    <div class="year-chips" id="yearChipsHome"></div>
+    <div class="subject-grid" id="subjectGrid"></div>
+
+    <div class="home-actions">
+      <button id="btnRandomAll" class="btn btn-primary">🔀 ランダム出題</button>
+      <button id="btnReview" class="btn btn-outline">
+        📝 復習モード <span class="badge" id="reviewCount">0</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- クイズ画面 -->
+  <section id="screen-quiz" class="screen">
+    <div class="quiz-topbar">
+      <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+      <span class="progress-text" id="progressText">1 / 10</span>
+    </div>
+
+    <div class="question-card">
+      <p class="subject-tag" id="quizSubjectTag"></p>
+      <p class="question-text" id="questionText"></p>
+      <ol class="sub-items" id="subItems"></ol>
+    </div>
+
+    <div class="choices" id="choicesList"></div>
+
+    <div class="feedback" id="feedback" hidden>
+      <p class="feedback-text" id="feedbackText"></p>
+    </div>
+
+    <div class="post-answer-actions" id="postAnswerActions" hidden>
+      <button id="btnShowExplanation" class="btn btn-outline">📖 解説を見る</button>
+      <button id="btnNext" class="btn btn-primary">次の問題へ →</button>
+    </div>
+  </section>
+
+  <!-- セッション結果画面 -->
+  <section id="screen-session-result" class="screen">
+    <h2>お疲れさまでした</h2>
+    <p class="score-big" id="sessionScore">0 / 0</p>
+    <p class="score-sub" id="sessionScoreRate"></p>
+    <div class="session-list" id="sessionBreakdown"></div>
+    <div class="home-actions">
+      <button id="btnRetryWrong" class="btn btn-outline" hidden>間違えた問題だけ復習する</button>
+      <button id="btnBackHome" class="btn btn-primary">科目選択に戻る</button>
+    </div>
+  </section>
+
+  <!-- 成績画面 -->
+  <section id="screen-stats" class="screen">
+    <h2>成績</h2>
+    <div class="year-chips" id="yearChipsStats"></div>
+    <div class="stats-overall" id="statsOverall"></div>
+    <div class="stats-subject-list" id="statsBySubject"></div>
+    <div class="home-actions">
+      <button id="btnResetHistory" class="btn btn-danger-outline">学習履歴をリセット</button>
+    </div>
+  </section>
+
+</main>
+
+<div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+<div class="explanation-sheet" id="explanationSheet" hidden aria-hidden="true">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <h3>📖 解説</h3>
+    <button id="btnCloseSheet" class="icon-btn sheet-close" aria-label="閉じる">✕</button>
+  </div>
+  <div class="sheet-body" id="explanationCard"></div>
+  <div class="sheet-footer">
+    <button id="btnNextFromSheet" class="btn btn-primary">次の問題へ →</button>
+  </div>
+</div>
+
+<script src="./app.js"></script>
+</body>
+</html>

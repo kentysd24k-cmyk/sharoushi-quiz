@@ -1,0 +1,13 @@
+# 試験PDF原本(容量が大きく、著作権が試験実施団体に帰属するため公開リポジトリには含めない)
+pdf/
+
+# Python
+__pycache__/
+*.pyc
+
+# Claude Code のローカル設定(実行環境固有のパーミッション許可リストなど)
+.claude/settings.local.json
+
+# OS固有ファイル
+.DS_Store
+Thumbs.db

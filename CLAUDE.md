@@ -1,0 +1,25 @@
+# sharoushi-quiz
+
+社労士試験 択一式過去問クイズ(PWA)。`index.html` / `style.css` / `app.js` / `manifest.json` / `questions.json` / `icons/*` を Service Worker (`sw.js`) でキャッシュし、オフラインでも動作する。
+
+## Service Worker のキャッシュ更新について【重要】
+
+`sw.js` はアプリ本体一式 (`APP_SHELL`) をキャッシュファースト戦略で配信している。ブラウザは **`sw.js` 自体のバイト列が変わったときだけ** 新しいService Workerの更新を検知する。
+
+**そのため、以下のいずれかのファイルを1文字でも変更したら、`sw.js` の `CACHE_VERSION` を必ずインクリメントすること。**
+
+- `index.html`
+- `style.css`
+- `app.js`
+- `manifest.json`
+- `questions.json`
+- `icons/` 配下のファイル
+
+`CACHE_VERSION` を上げ忘れると、`sw.js` のバイト列が変化しないため更新が一切検知されず、ユーザーには古いキャッシュが無期限に配信され続ける(オフラインはもちろん、オンライン時でもキャッシュファーストのため新しい内容が反映されない)。
+
+更新の反映自体(`skipWaiting` / `clients.claim` による新SWの即時有効化、旧キャッシュの自動削除)は `sw.js` 側で実装済みなので、`CACHE_VERSION` さえ上げれば自動的に伝播する。
+
+```js
+// sw.js
+const CACHE_VERSION = "v2"; // ← ファイルを変更したらここをインクリメント
+```
