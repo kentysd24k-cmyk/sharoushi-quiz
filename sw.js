@@ -4,22 +4,36 @@
 // いずれかを変更したら、このバージョンを必ず上げること。
 // sw.js自体のバイト列が変わらないとブラウザは更新を検知せず、
 // 古いキャッシュが無期限に配信され続けてしまう。
-const CACHE_VERSION = "v10";
+const CACHE_VERSION = "v11";
 const CACHE_NAME = `srquiz-cache-${CACHE_VERSION}`;
+// questions.json(1MB超)はここに含めない。network-first で実行時にキャッシュされるため、
+// install時の事前キャッシュ対象から外し、install失敗の主因(大容量フェッチの失敗)を排除する。
 const APP_SHELL = [
   "./",
   "./index.html",
   "./style.css",
   "./app.js",
   "./manifest.json",
-  "./questions.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
+    caches
+      .open(CACHE_NAME)
+      .then((cache) =>
+        // cache.addAll() は1つでも失敗すると全体が失敗する(iOSホーム画面アプリで
+        // 起動不能になる主因)。個別にキャッシュし、失敗したファイルはスキップする。
+        Promise.all(
+          APP_SHELL.map((url) =>
+            cache.add(url).catch((err) => {
+              console.warn(`[sw] precache failed, skipping: ${url}`, err);
+            })
+          )
+        )
+      )
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -28,6 +42,7 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) =>
+        // 現バージョン以外のキャッシュ(旧バージョンすべて)を確実に削除する。
         Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
       )
       .then(() => self.clients.claim())
@@ -35,10 +50,14 @@ self.addEventListener("activate", (event) => {
 });
 
 // questions.json は「解説の追記」等で内容が頻繁に更新されるため、
-// キャッシュファーストではなく network-first(オンライン時は常に最新を取得し、
-// オフライン時のみキャッシュにフォールバック)で配信する。
-function isQuestionsJson(req) {
-  return new URL(req.url).pathname.endsWith("/questions.json");
+// index.html はPWAの入口(iOSホーム画面アプリの起動先)であり、古いキャッシュに
+// 固定されると起動不能になり得るため、いずれもキャッシュファーストではなく
+// network-first(オンライン時は常に最新を取得し、オフライン時のみキャッシュに
+// フォールバック)で配信する。
+function isNetworkFirst(req) {
+  if (req.mode === "navigate") return true;
+  const pathname = new URL(req.url).pathname;
+  return pathname.endsWith("/questions.json") || pathname.endsWith("/index.html");
 }
 
 function networkFirst(req) {
@@ -50,7 +69,7 @@ function networkFirst(req) {
       }
       return res;
     })
-    .catch(() => caches.match(req));
+    .catch(() => caches.match(req).then((cached) => cached || caches.match("./index.html")));
 }
 
 function cacheFirst(req) {
@@ -76,5 +95,5 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
 
-  event.respondWith(isQuestionsJson(req) ? networkFirst(req) : cacheFirst(req));
+  event.respondWith(isNetworkFirst(req) ? networkFirst(req) : cacheFirst(req));
 });

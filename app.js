@@ -567,6 +567,16 @@ async function init() {
   cacheEls();
   bindEvents();
 
+  // questions.json の取得成否に関わらず、SW登録/更新検知は必ず行う。
+  // (取得を先に待つ構造だと、通信が不安定な瞬間に開いた場合にSW登録自体が
+  // スキップされ、アプリの更新が永久に検知されなくなる不具合があった。)
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker
+      .register("./sw.js")
+      .then((registration) => watchForServiceWorkerUpdate(registration))
+      .catch(() => {});
+  }
+
   try {
     const res = await fetch("./questions.json");
     state.questions = await res.json();
@@ -592,13 +602,6 @@ async function init() {
 
   renderHome();
   showScreen("screen-home");
-
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker
-      .register("./sw.js")
-      .then((registration) => watchForServiceWorkerUpdate(registration))
-      .catch(() => {});
-  }
 }
 
 init();
