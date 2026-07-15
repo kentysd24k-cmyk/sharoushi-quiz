@@ -4,9 +4,9 @@
 // いずれかを変更したら、このバージョンを必ず上げること。
 // sw.js自体のバイト列が変わらないとブラウザは更新を検知せず、
 // 古いキャッシュが無期限に配信され続けてしまう。
-const CACHE_VERSION = "v12";
+const CACHE_VERSION = "v13";
 const CACHE_NAME = `srquiz-cache-${CACHE_VERSION}`;
-// questions.json(1MB超)はここに含めない。network-first で実行時にキャッシュされるため、
+// questions.json / articles.json はここに含めない。network-first で実行時にキャッシュされるため、
 // install時の事前キャッシュ対象から外し、install失敗の主因(大容量フェッチの失敗)を排除する。
 const APP_SHELL = [
   "./",
@@ -50,7 +50,7 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// questions.json は「解説の追記」等で内容が頻繁に更新されるため、
+// questions.json / articles.json は内容が頻繁に更新されるため、
 // index.html はPWAの入口(iOSホーム画面アプリの起動先)であり、古いキャッシュに
 // 固定されると起動不能になり得るため、いずれもキャッシュファーストではなく
 // network-first(オンライン時は常に最新を取得し、オフライン時のみキャッシュに
@@ -58,7 +58,11 @@ self.addEventListener("activate", (event) => {
 function isNetworkFirst(req) {
   if (req.mode === "navigate") return true;
   const pathname = new URL(req.url).pathname;
-  return pathname.endsWith("/questions.json") || pathname.endsWith("/index.html");
+  return (
+    pathname.endsWith("/questions.json") ||
+    pathname.endsWith("/articles.json") ||
+    pathname.endsWith("/index.html")
+  );
 }
 
 function networkFirst(req) {

@@ -1,19 +1,19 @@
 # sharoushi-quiz
 
-社労士試験 択一式過去問クイズ(PWA)。`index.html` / `style.css` / `app.js` / `manifest.json` / `vendor/chart.umd.min.js` / `questions.json` / `icons/*` を Service Worker (`sw.js`) でキャッシュし、オフラインでも動作する。
+社労士試験 択一式過去問クイズ(PWA)。「📖 択一トレ」(過去問クイズ)と「✏️ 条文トレ」(条文穴埋め)の2モード構成。`index.html` / `style.css` / `app.js` / `manifest.json` / `vendor/chart.umd.min.js` / `questions.json` / `articles.json` / `icons/*` を Service Worker (`sw.js`) でキャッシュし、オフラインでも動作する。
 
 ## Service Worker のキャッシュ戦略【重要】
 
 `sw.js` の配信戦略はリソースによって異なる。
 
-- **network-first**(オンライン時は常に最新を取得し、オフライン時のみキャッシュにフォールバック): `questions.json`、ナビゲーションリクエスト(`index.html` = PWAの入口)
+- **network-first**(オンライン時は常に最新を取得し、オフライン時のみキャッシュにフォールバック): `questions.json`(択一トレの問題データ)、`articles.json`(条文トレの穴埋めデータ)、ナビゲーションリクエスト(`index.html` = PWAの入口)
 - **cache-first**: それ以外の `APP_SHELL`(`style.css` / `app.js` / `manifest.json` / `vendor/chart.umd.min.js` / `icons/*`)
 
-`questions.json` と `index.html` が network-first なのは、iOSホーム画面PWAが古いキャッシュに固定されて起動不能になる事故を防ぐため(詳細はコミット履歴参照)。`questions.json`(1MB超)は install 時のプリキャッシュ対象からも除外している。cache.addAll() は1ファイルでも失敗すると全体が失敗し、大容量ファイルのフェッチ失敗がSWのインストールごと失敗させる主因になっていた。
+`questions.json`・`articles.json` と `index.html` が network-first なのは、iOSホーム画面PWAが古いキャッシュに固定されて起動不能になる事故を防ぐため(詳細はコミット履歴参照)。これらは容量やコンテンツ更新頻度に関わらず install 時のプリキャッシュ対象からも除外している。cache.addAll() は1ファイルでも失敗すると全体が失敗し、大容量ファイルのフェッチ失敗がSWのインストールごと失敗させる主因になっていた。
 
 ブラウザは **`sw.js` 自体のバイト列が変わったときだけ** 新しいService Workerの更新を検知する。
 
-**そのため、cache-first で配信されるファイル(`style.css` / `app.js` / `manifest.json` / `vendor/` 配下 / `icons/` 配下)のいずれかを1文字でも変更したら、`sw.js` の `CACHE_VERSION` を必ずインクリメントすること。**(`questions.json` と `index.html` は network-first のため理論上は不要だが、更新トースト通知([`app.js`](app.js)の`watchForServiceWorkerUpdate`)を確実に発火させるため、アプリファイルを変更した際は慣習として毎回上げてよい。)
+**そのため、cache-first で配信されるファイル(`style.css` / `app.js` / `manifest.json` / `vendor/` 配下 / `icons/` 配下)のいずれかを1文字でも変更したら、`sw.js` の `CACHE_VERSION` を必ずインクリメントすること。**(`questions.json` / `articles.json` と `index.html` は network-first のため理論上は不要だが、更新トースト通知([`app.js`](app.js)の`watchForServiceWorkerUpdate`)を確実に発火させるため、アプリファイルを変更した際は慣習として毎回上げてよい。)
 
 `CACHE_VERSION` を上げ忘れると、cache-first対象ファイルについては `sw.js` のバイト列が変化しないため更新が一切検知されず、ユーザーには古いキャッシュが無期限に配信され続ける。
 
@@ -21,8 +21,18 @@
 
 ```js
 // sw.js
-const CACHE_VERSION = "v12"; // ← ファイルを変更したらここをインクリメント
+const CACHE_VERSION = "v13"; // ← ファイルを変更したらここをインクリメント
 ```
+
+## データの保存先(localStorage)【重要】
+
+すべて localStorage 内で完結し、外部APIは使わない。択一トレと条文トレの学習履歴は別キーで管理し、互いに影響しない。
+
+- 択一トレ: `srquiz_history_v1`(正誤履歴)、`srquiz_daily_v1`(日次解答数)
+- 条文トレ: `srquiz_jobun_history_v1`(正誤履歴)、`srquiz_jobun_daily_v1`(日次解答数)、`srquiz_jobun_bookmarks_v1`(ブックマーク)
+- 共通: `srquiz_notes_v1`(ノート)、`srquiz_mode_v1`(最後に使ったモード)
+
+エクスポート/インポート(設定画面)は `app.js` の `APP_STORAGE_KEYS` に列挙されたキーをすべて対象にする。新しい localStorage キーを追加したら、この配列にも必ず追記すること。
 
 ## vendor/ について
 

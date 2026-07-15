@@ -3,9 +3,21 @@
 const HISTORY_KEY = "srquiz_history_v1";
 const NOTES_KEY = "srquiz_notes_v1";
 const DAILY_KEY = "srquiz_daily_v1";
-const APP_STORAGE_KEYS = [HISTORY_KEY, NOTES_KEY, DAILY_KEY];
+const MODE_KEY = "srquiz_mode_v1";
+const JOBUN_HISTORY_KEY = "srquiz_jobun_history_v1";
+const JOBUN_DAILY_KEY = "srquiz_jobun_daily_v1";
+const JOBUN_BOOKMARK_KEY = "srquiz_jobun_bookmarks_v1";
+const APP_STORAGE_KEYS = [
+  HISTORY_KEY,
+  NOTES_KEY,
+  DAILY_KEY,
+  JOBUN_HISTORY_KEY,
+  JOBUN_DAILY_KEY,
+  JOBUN_BOOKMARK_KEY,
+];
 const CHOICE_KEYS = ["A", "B", "C", "D", "E"];
 const SUBJECT_TAGS = ["労基", "安衛", "労災", "雇用", "徴収", "労一", "健保", "厚年", "国年", "社一"];
+const QUIZ_LIKE_SCREENS = new Set(["screen-quiz", "screen-jobun-quiz", "screen-note-edit"]);
 
 const SUBJECT_SHORT_RULES = [
   ["労働基準法及び労働安全衛生法", "労働基準法・安衛法"],
@@ -38,17 +50,28 @@ function tagsForSubject(full) {
 }
 
 const els = {};
-let charts = { radar: null, yearBar: null, daily: null };
+let charts = {
+  radar: null,
+  yearBar: null,
+  daily: null,
+  jobunHomeDaily: null,
+  jobunSubjectBar: null,
+  jobunDaily: null,
+};
 
 const state = {
+  mode: "taku", // "taku" | "jobun"
   questions: [],
   subjects: [],
   years: [],
   selectedYear: "ALL",
   analysisYear: "ALL",
+  analysisMode: "taku",
   noteFilterTag: "ALL",
-  session: null, // { list, index, label, results: [{id, correct}] }
+  session: null, // 択一セッション { list, index, label, results: [{id, correct}] }
   editingNote: null,
+  articles: [],
+  jobunSession: null, // 条文トレセッション { list, index, label, results: [{id, correct}] }
 };
 
 // ---------- utils ----------
@@ -118,7 +141,7 @@ function filteredQuestions() {
   return questionsForYear(state.selectedYear);
 }
 
-// ---------- history (localStorage) ----------
+// ---------- 択一: history (localStorage) ----------
 
 function loadHistory() {
   try {
@@ -184,24 +207,6 @@ function yearStats(year) {
   return { total: qs.length, attempted, correct };
 }
 
-function overallStats() {
-  const history = loadHistory();
-  const qs = filteredQuestions();
-  let attempted = 0;
-  let correct = 0;
-  let totalAnswers = 0;
-  let totalCorrectAnswers = 0;
-  for (const q of qs) {
-    const e = history[String(q.id)];
-    if (!e) continue;
-    attempted += 1;
-    if (e.lastResult === "correct") correct += 1;
-    totalAnswers += e.correct + e.incorrect;
-    totalCorrectAnswers += e.correct;
-  }
-  return { attempted, correct, total: qs.length, totalAnswers, totalCorrectAnswers };
-}
-
 function computeWeakSubjects(year, threshold = 60) {
   const stats = state.subjects.map((s) => ({ subject: s, ...subjectStatsFor(s, year) }));
   const attempted = stats.filter((s) => s.attempted > 0);
@@ -216,7 +221,7 @@ function computeWeakSubjects(year, threshold = 60) {
     .map((s) => s.subject);
 }
 
-// ---------- daily study log (localStorage) ----------
+// ---------- 択一: daily study log (localStorage) ----------
 
 function loadDaily() {
   try {
@@ -226,8 +231,7 @@ function loadDaily() {
   }
 }
 
-function saveDaily(daily) {
-  // 直近60日分だけ保持し、無期限に肥大化しないようにする。
+function pruneDailyMap(daily) {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 60);
   const cutoffKey = dateKey(cutoff);
@@ -235,7 +239,12 @@ function saveDaily(daily) {
   for (const k in daily) {
     if (k >= cutoffKey) pruned[k] = daily[k];
   }
-  localStorage.setItem(DAILY_KEY, JSON.stringify(pruned));
+  return pruned;
+}
+
+function saveDaily(daily) {
+  // 直近60日分だけ保持し、無期限に肥大化しないようにする。
+  localStorage.setItem(DAILY_KEY, JSON.stringify(pruneDailyMap(daily)));
 }
 
 function recordDailyAnswer() {
@@ -245,8 +254,7 @@ function recordDailyAnswer() {
   saveDaily(daily);
 }
 
-function last7DaysCounts() {
-  const daily = loadDaily();
+function last7DaysFrom(daily) {
   const days = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
@@ -255,6 +263,153 @@ function last7DaysCounts() {
     days.push({ key, label: `${d.getMonth() + 1}/${d.getDate()}`, count: daily[key] || 0 });
   }
   return days;
+}
+
+function last7DaysCounts() {
+  return last7DaysFrom(loadDaily());
+}
+
+// ---------- 条文トレ: history / daily / bookmarks (localStorage) ----------
+
+function loadJobunHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(JOBUN_HISTORY_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveJobunHistory(history) {
+  localStorage.setItem(JOBUN_HISTORY_KEY, JSON.stringify(history));
+}
+
+function recordJobunAnswer(id, isCorrect) {
+  const history = loadJobunHistory();
+  const key = String(id);
+  const entry = history[key] || { correct: 0, incorrect: 0, lastResult: null, lastAnsweredAt: 0 };
+  if (isCorrect) entry.correct += 1;
+  else entry.incorrect += 1;
+  entry.lastResult = isCorrect ? "correct" : "incorrect";
+  entry.lastAnsweredAt = Date.now();
+  history[key] = entry;
+  saveJobunHistory(history);
+  recordJobunDailyAnswer();
+}
+
+function loadJobunDaily() {
+  try {
+    return JSON.parse(localStorage.getItem(JOBUN_DAILY_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveJobunDaily(daily) {
+  localStorage.setItem(JOBUN_DAILY_KEY, JSON.stringify(pruneDailyMap(daily)));
+}
+
+function recordJobunDailyAnswer() {
+  const daily = loadJobunDaily();
+  const key = dateKey(new Date());
+  daily[key] = (daily[key] || 0) + 1;
+  saveJobunDaily(daily);
+}
+
+function jobunLast7DaysCounts() {
+  return last7DaysFrom(loadJobunDaily());
+}
+
+function loadJobunBookmarks() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(JOBUN_BOOKMARK_KEY)) || [];
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveJobunBookmarks(arr) {
+  localStorage.setItem(JOBUN_BOOKMARK_KEY, JSON.stringify(arr));
+}
+
+function toggleJobunBookmark(id) {
+  const arr = loadJobunBookmarks();
+  const i = arr.indexOf(id);
+  if (i === -1) arr.push(id);
+  else arr.splice(i, 1);
+  saveJobunBookmarks(arr);
+}
+
+function jobunArticleGroups() {
+  const groups = {};
+  const order = [];
+  for (const a of state.articles) {
+    const key = `${a.law}__${a.article}`;
+    if (!groups[key]) {
+      groups[key] = [];
+      order.push(key);
+    }
+    groups[key].push(a);
+  }
+  return { groups, order };
+}
+
+function articleMastery(entries) {
+  const history = loadJobunHistory();
+  let hasIncorrect = false;
+  let hasAttempted = false;
+  for (const a of entries) {
+    const e = history[a.id];
+    if (!e) continue;
+    hasAttempted = true;
+    if (e.lastResult === "incorrect") hasIncorrect = true;
+  }
+  if (hasIncorrect) return "red";
+  if (hasAttempted) return "teal";
+  return "gray";
+}
+
+function jobunSubjectTags() {
+  const seen = new Set();
+  const tags = [];
+  for (const a of state.articles) {
+    if (!seen.has(a.subject)) {
+      seen.add(a.subject);
+      tags.push(a.subject);
+    }
+  }
+  return tags;
+}
+
+function jobunSubjectStats(subject) {
+  const history = loadJobunHistory();
+  const entries = state.articles.filter((a) => a.subject === subject);
+  let attempted = 0;
+  let correct = 0;
+  for (const a of entries) {
+    const e = history[a.id];
+    if (!e) continue;
+    attempted += 1;
+    if (e.lastResult === "correct") correct += 1;
+  }
+  return { total: entries.length, attempted, correct };
+}
+
+function composeJobunAutoSession(limit = 50) {
+  const history = loadJobunHistory();
+  const now = Date.now();
+  const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
+  const withMeta = state.articles.map((a) => ({ a, e: history[a.id] }));
+  const recentWrong = withMeta.filter((x) => x.e && x.e.lastResult === "incorrect");
+  const staleCorrect = withMeta.filter(
+    (x) => x.e && x.e.lastResult === "correct" && now - (x.e.lastAnsweredAt || 0) >= THREE_DAYS
+  );
+  const unlearned = withMeta.filter((x) => !x.e);
+  const freshCorrect = withMeta.filter(
+    (x) => x.e && x.e.lastResult === "correct" && now - (x.e.lastAnsweredAt || 0) < THREE_DAYS
+  );
+  const ordered = [...recentWrong, ...staleCorrect, ...unlearned, ...freshCorrect].map((x) => x.a);
+  return ordered.slice(0, Math.min(limit, ordered.length));
 }
 
 // ---------- notes (localStorage) ----------
@@ -339,6 +494,16 @@ function searchQuestions(query) {
   });
 }
 
+function searchArticles(query) {
+  const q = query.toLowerCase();
+  return state.articles.filter((a) => {
+    const hay = [a.law, a.article, a.subject, a.text, ...a.blanks.map((b) => b.answer)]
+      .join(" ")
+      .toLowerCase();
+    return hay.includes(q);
+  });
+}
+
 function searchNotes(query) {
   const q = query.toLowerCase();
   return loadNotes().filter((n) => {
@@ -347,22 +512,21 @@ function searchNotes(query) {
   });
 }
 
+function articlePreviewText(a) {
+  return a.text.replace(/【\d+】/g, "＿＿");
+}
+
 function renderSearchResults(rawQuery) {
   const query = String(rawQuery || "").trim();
   els.btnSearchClear.hidden = query.length === 0;
-
-  if (!query) {
-    els.searchResults.hidden = true;
-    els.searchNormalContent.hidden = false;
-    return;
-  }
-
-  els.searchResults.hidden = false;
-  els.searchNormalContent.hidden = true;
+  els.searchEmptyNote.hidden = query.length !== 0;
+  els.searchResults.hidden = query.length === 0;
+  if (!query) return;
 
   const qResults = searchQuestions(query).slice(0, 30);
+  const aResults = searchArticles(query).slice(0, 30);
   const nResults = searchNotes(query);
-  els.searchResultsCount.textContent = `問題 ${qResults.length}件・ノート ${nResults.length}件`;
+  els.searchResultsCount.textContent = `問題 ${qResults.length}件・条文 ${aResults.length}件・ノート ${nResults.length}件`;
 
   els.searchQuestionList.innerHTML = qResults.length
     ? qResults
@@ -381,6 +545,26 @@ function renderSearchResults(rawQuery) {
     btn.addEventListener("click", () => {
       const q = state.questions.find((it) => String(it.id) === btn.dataset.qid);
       if (q) startSession([q], `検索結果: ${shortSubjectName(q.subject)} 第${q.question_number}問`);
+    });
+  });
+
+  els.searchArticleList.innerHTML = aResults.length
+    ? aResults
+        .map(
+          (a) => `
+        <button type="button" class="search-result-item" data-aid="${escapeHtml(a.id)}">
+          <span class="search-result-meta">${escapeHtml(a.law)} ${escapeHtml(a.article)}</span>
+          <span class="search-result-snippet">${highlightText(snippetAround(articlePreviewText(a), query), query)}</span>
+        </button>
+      `
+        )
+        .join("")
+    : `<p class="empty-note">該当する条文はありません。</p>`;
+
+  els.searchArticleList.querySelectorAll(".search-result-item").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const a = state.articles.find((it) => it.id === btn.dataset.aid);
+      if (a) startJobunSession([a], `検索結果: ${a.law} ${a.article}`);
     });
   });
 
@@ -410,17 +594,47 @@ function showScreen(id) {
   window.scrollTo(0, 0);
 
   els.btnBack.hidden = id === "screen-home";
+  els.bottomNav.hidden = QUIZ_LIKE_SCREENS.has(id);
+  els.bottomNav.querySelectorAll(".bottom-nav-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.screen === id);
+  });
+
   const titles = {
     "screen-home": "社労士 過去問クイズ",
     "screen-quiz": state.session ? state.session.label : "クイズ",
     "screen-session-result": "結果",
-    "screen-stats": "成績",
+    "screen-jobun-list": "条文一覧",
+    "screen-jobun-quiz": state.jobunSession ? state.jobunSession.label : "条文トレ",
+    "screen-jobun-result": "結果",
     "screen-notes": "ノート",
     "screen-note-edit": state.editingNote && state.editingNote.id ? "ノートを編集" : "ノートを作成",
     "screen-analysis": "分析",
+    "screen-search": "検索",
     "screen-settings": "設定",
   };
   els.headerTitle.textContent = titles[id] || "社労士 過去問クイズ";
+}
+
+// ---------- モード切替 ----------
+
+function renderModeTabs() {
+  els.modeTabTaku.classList.toggle("active", state.mode === "taku");
+  els.modeTabJobun.classList.toggle("active", state.mode === "jobun");
+}
+
+function applyMode() {
+  els.modeHomeTaku.hidden = state.mode !== "taku";
+  els.modeHomeJobun.hidden = state.mode !== "jobun";
+  renderModeTabs();
+  if (state.mode === "taku") renderHome();
+  else renderJobunHome();
+}
+
+function switchMode(mode) {
+  if (state.mode === mode) return;
+  state.mode = mode;
+  localStorage.setItem(MODE_KEY, mode);
+  applyMode();
 }
 
 // ---------- rendering: year chips (汎用) ----------
@@ -441,7 +655,7 @@ function renderYearChips(container, selectedKey, onSelect) {
   }
 }
 
-// ---------- rendering: home ----------
+// ---------- rendering: 択一トレ ホーム ----------
 
 function renderHome() {
   renderYearChips(els.yearChipsHome, state.selectedYear, (key) => {
@@ -485,7 +699,7 @@ function renderHome() {
   els.btnReview.style.opacity = wrongCount === 0 ? 0.5 : 1;
 }
 
-// ---------- rendering: quiz ----------
+// ---------- rendering: 択一クイズ ----------
 
 function startSession(questions, label) {
   if (questions.length === 0) return;
@@ -712,56 +926,269 @@ function retryWrongFromSession() {
   startSession(wrongQs, "間違えた問題の復習");
 }
 
-// ---------- rendering: stats ----------
+// ---------- rendering: 条文トレ ホーム ----------
 
-function renderStats() {
-  renderYearChips(els.yearChipsStats, state.selectedYear, (key) => {
-    state.selectedYear = key;
-    renderStats();
-  });
+function renderJobunHome() {
+  const bookmarks = loadJobunBookmarks();
+  els.jobunBookmarkCount.textContent = bookmarks.length;
+  els.btnJobunBookmarks.disabled = bookmarks.length === 0;
+  els.btnJobunBookmarks.style.opacity = bookmarks.length === 0 ? 0.5 : 1;
+  els.btnJobunAuto.disabled = state.articles.length === 0;
+  els.btnJobunAuto.style.opacity = state.articles.length === 0 ? 0.5 : 1;
 
-  const overall = overallStats();
-  els.statsOverall.innerHTML = `
-    <div>
-      <div class="stat-num">${overall.attempted}/${overall.total}</div>
-      <div class="stat-label">学習済み問題数</div>
-    </div>
-    <div>
-      <div class="stat-num">${
-        overall.attempted > 0 ? Math.round((overall.correct / overall.attempted) * 100) : 0
-      }%</div>
-      <div class="stat-label">現在の正答率</div>
-    </div>
-    <div>
-      <div class="stat-num">${overall.totalAnswers}</div>
-      <div class="stat-label">総解答回数</div>
-    </div>
-  `;
-
-  els.statsBySubject.innerHTML = "";
-  for (const subject of state.subjects) {
-    const s = subjectStats(subject);
-    const pct = s.attempted > 0 ? Math.round((s.correct / s.attempted) * 100) : 0;
-    const row = document.createElement("div");
-    row.className = "stats-row";
-    row.innerHTML = `
-      <div class="row-top">
-        <span>${shortSubjectName(subject)}</span>
-        <span class="pct">${s.attempted > 0 ? pct + "%" : "-"}</span>
-      </div>
-      <div class="row-bar"><div class="row-bar-fill" style="width:${pct}%"></div></div>
-      <div class="row-meta">学習済 ${s.attempted} / ${s.total} 問</div>
-    `;
-    els.statsBySubject.appendChild(row);
+  if (typeof Chart !== "undefined") {
+    const days = jobunLast7DaysCounts();
+    if (charts.jobunHomeDaily) charts.jobunHomeDaily.destroy();
+    charts.jobunHomeDaily = new Chart(els.chartJobunHomeDaily, {
+      type: "bar",
+      data: {
+        labels: days.map((d) => d.label),
+        datasets: [{ label: "解答数", data: days.map((d) => d.count), backgroundColor: "#5eead4", borderRadius: 6 }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        plugins: { legend: { display: false } },
+      },
+    });
   }
 }
 
-function resetHistory() {
-  if (!confirm("学習履歴をすべてリセットします。よろしいですか？")) return;
-  localStorage.removeItem(HISTORY_KEY);
-  localStorage.removeItem(DAILY_KEY);
-  renderStats();
-  renderHome();
+// ---------- rendering: 条文一覧 ----------
+
+function renderJobunList() {
+  const { groups, order } = jobunArticleGroups();
+  const lawOrder = [];
+  const byLaw = {};
+  for (const key of order) {
+    const entries = groups[key];
+    const law = entries[0].law;
+    if (!byLaw[law]) {
+      byLaw[law] = [];
+      lawOrder.push(law);
+    }
+    byLaw[law].push(entries);
+  }
+
+  els.jobunLawGroups.innerHTML = "";
+  if (lawOrder.length === 0) {
+    els.jobunLawGroups.innerHTML = `<p class="empty-note">条文データがありません。</p>`;
+    return;
+  }
+
+  for (const law of lawOrder) {
+    const section = document.createElement("div");
+    section.className = "jobun-law-group";
+    const heading = document.createElement("h3");
+    heading.className = "jobun-law-heading";
+    heading.textContent = law;
+    section.appendChild(heading);
+
+    for (const entries of byLaw[law]) {
+      const mastery = articleMastery(entries);
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "jobun-article-row";
+      row.innerHTML = `
+        <span class="jobun-mastery-dot ${mastery}" aria-hidden="true"></span>
+        <span class="jobun-article-row-body">
+          <span class="jobun-article-row-name">${escapeHtml(entries[0].article)}</span>
+          <span class="jobun-article-row-preview">${escapeHtml(truncate(articlePreviewText(entries[0]), 42))}</span>
+        </span>
+      `;
+      row.addEventListener("click", () => startJobunSession(entries, `${law} ${entries[0].article}`));
+      section.appendChild(row);
+    }
+    els.jobunLawGroups.appendChild(section);
+  }
+}
+
+// ---------- rendering: 条文トレ 出題 ----------
+
+function startJobunSession(entries, label) {
+  if (entries.length === 0) return;
+  state.jobunSession = { list: shuffle(entries), index: 0, label, results: [] };
+  showScreen("screen-jobun-quiz");
+  renderJobunQuestion();
+}
+
+function jobunCurrentQuestion() {
+  return state.jobunSession.list[state.jobunSession.index];
+}
+
+function renderJobunArticleText(entry) {
+  let html = escapeHtml(entry.text);
+  entry.blanks.forEach((b, i) => {
+    const marker = `【${b.position}】`;
+    let replacement;
+    if (i < entry._blankIndex || (i === entry._blankIndex && entry._answered)) {
+      const wasCorrect = !!entry._results[i];
+      replacement = `<span class="jobun-blank resolved ${wasCorrect ? "correct" : "incorrect"}">${escapeHtml(b.answer)}</span>`;
+    } else if (i === entry._blankIndex) {
+      replacement = `<span class="jobun-blank active"></span>`;
+    } else {
+      replacement = `<span class="jobun-blank pending"></span>`;
+    }
+    html = html.split(marker).join(replacement);
+  });
+  els.jobunArticleText.innerHTML = html;
+}
+
+function updateJobunSessionCounter() {
+  const session = state.jobunSession;
+  const correctCount = session.results.filter((r) => r.correct).length;
+  els.jobunSessionCounter.textContent = `${correctCount}/${session.list.length}`;
+}
+
+function renderJobunChoices() {
+  const entry = jobunCurrentQuestion();
+  const blank = entry.blanks[entry._blankIndex];
+  const options = shuffle([blank.answer, ...blank.distractors]);
+
+  els.jobunChoiceGrid.querySelectorAll(".jobun-choice-btn").forEach((b) => b.remove());
+  options.forEach((opt) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "jobun-choice-btn";
+    btn.textContent = opt;
+    btn.addEventListener("click", () => selectJobunChoice(opt, btn));
+    els.jobunChoiceGrid.appendChild(btn);
+  });
+  updateJobunSessionCounter();
+}
+
+function updateJobunBookmarkButton() {
+  const entry = jobunCurrentQuestion();
+  const bookmarked = loadJobunBookmarks().includes(entry.id);
+  els.btnJobunBookmark.classList.toggle("active", bookmarked);
+  els.btnJobunBookmark.textContent = bookmarked ? "🔖 ブックマーク済み" : "🔖 ブックマーク";
+}
+
+function renderJobunQuestion() {
+  const session = state.jobunSession;
+  const entry = jobunCurrentQuestion();
+  entry._blankIndex = 0;
+  entry._answered = false;
+  entry._results = [];
+
+  const total = session.list.length;
+  const pos = session.index + 1;
+  els.jobunProgressBar.style.width = `${(session.index / total) * 100}%`;
+  els.jobunProgressText.textContent = `${pos} / ${total}`;
+
+  els.jobunArticleTag.textContent = `${entry.law} ${entry.article}`;
+  renderJobunArticleText(entry);
+
+  els.jobunFeedback.hidden = true;
+  els.jobunPostActions.hidden = true;
+  els.btnJobunDontKnow.hidden = false;
+  renderJobunChoices();
+  updateJobunBookmarkButton();
+}
+
+function advanceJobunBlankOrFinish(entry) {
+  const hasMoreBlanks = entry._blankIndex + 1 < entry.blanks.length;
+  if (hasMoreBlanks) {
+    setTimeout(() => {
+      entry._blankIndex += 1;
+      entry._answered = false;
+      renderJobunArticleText(entry);
+      renderJobunChoices();
+      els.btnJobunDontKnow.hidden = false;
+    }, 700);
+  } else {
+    finishJobunQuestion(entry);
+  }
+}
+
+function finishJobunQuestion(entry) {
+  const allCorrect = entry._results.every(Boolean);
+  recordJobunAnswer(entry.id, allCorrect);
+
+  const session = state.jobunSession;
+  session.results = session.results.filter((r) => r.id !== entry.id);
+  session.results.push({ id: entry.id, correct: allCorrect });
+
+  els.jobunFeedbackText.textContent = allCorrect ? "○ 正解！" : "✕ 不正解…";
+  els.jobunFeedback.hidden = false;
+  els.jobunPostActions.hidden = false;
+  updateJobunSessionCounter();
+
+  const nextLabel = session.index + 1 >= session.list.length ? "結果を見る →" : "次の問題へ →";
+  els.btnJobunNext.textContent = nextLabel;
+}
+
+function selectJobunChoice(selectedText, btnEl) {
+  const entry = jobunCurrentQuestion();
+  if (entry._answered) return;
+
+  const blank = entry.blanks[entry._blankIndex];
+  const isCorrect = selectedText === blank.answer;
+  entry._results[entry._blankIndex] = isCorrect;
+  entry._answered = true;
+
+  els.jobunChoiceGrid.querySelectorAll(".jobun-choice-btn").forEach((b) => {
+    b.classList.add("disabled");
+    if (b.textContent === blank.answer) b.classList.add("correct");
+    else if (b === btnEl) b.classList.add("incorrect");
+  });
+
+  renderJobunArticleText(entry);
+  els.btnJobunDontKnow.hidden = true;
+  advanceJobunBlankOrFinish(entry);
+}
+
+function jobunDontKnow() {
+  const entry = jobunCurrentQuestion();
+  if (entry._answered) return;
+  const blank = entry.blanks[entry._blankIndex];
+  entry._results[entry._blankIndex] = false;
+  entry._answered = true;
+
+  els.jobunChoiceGrid.querySelectorAll(".jobun-choice-btn").forEach((b) => {
+    b.classList.add("disabled");
+    if (b.textContent === blank.answer) b.classList.add("correct");
+  });
+
+  renderJobunArticleText(entry);
+  els.btnJobunDontKnow.hidden = true;
+  advanceJobunBlankOrFinish(entry);
+}
+
+function nextJobunQuestion() {
+  const session = state.jobunSession;
+  session.index += 1;
+  if (session.index >= session.list.length) {
+    finishJobunSession();
+  } else {
+    renderJobunQuestion();
+  }
+}
+
+function finishJobunSession() {
+  const session = state.jobunSession;
+  const correctCount = session.results.filter((r) => r.correct).length;
+  const total = session.results.length;
+
+  els.jobunProgressBar.style.width = "100%";
+  els.jobunSessionScore.textContent = `${correctCount} / ${total}`;
+  els.jobunSessionScoreRate.textContent =
+    total > 0 ? `正答率 ${Math.round((correctCount / total) * 100)}%` : "";
+
+  els.jobunSessionBreakdown.innerHTML = "";
+  session.results.forEach((r) => {
+    const entry = session.list.find((a) => a.id === r.id);
+    const row = document.createElement("div");
+    row.className = `session-item ${r.correct ? "ok" : "ng"}`;
+    row.innerHTML = `
+      <span class="mark">${r.correct ? "○" : "✕"}</span>
+      <span class="qtext">${entry.law} ${entry.article}　${escapeHtml(articlePreviewText(entry))}</span>
+    `;
+    els.jobunSessionBreakdown.appendChild(row);
+  });
+
+  showScreen("screen-jobun-result");
 }
 
 // ---------- rendering: notes ----------
@@ -921,7 +1348,7 @@ function deleteCurrentNote() {
   renderNotesList();
 }
 
-// ---------- rendering: analysis ----------
+// ---------- rendering: 分析(択一) ----------
 
 function renderWeakRanking(year) {
   const history = loadHistory();
@@ -955,10 +1382,10 @@ function renderWeakRanking(year) {
   });
 }
 
-function renderAnalysis() {
+function renderAnalysisTaku() {
   renderYearChips(els.yearChipsAnalysis, state.analysisYear, (key) => {
     state.analysisYear = key;
-    renderAnalysis();
+    renderAnalysisTaku();
   });
 
   const year = state.analysisYear;
@@ -1045,10 +1472,124 @@ function startWeakSubjectsSession() {
   startSession(qs, `苦手科目集中: ${weak.map(shortSubjectName).join("・")}`);
 }
 
+// ---------- rendering: 分析(条文) ----------
+
+function renderAnalysisJobun() {
+  const { groups, order } = jobunArticleGroups();
+  let tealCount = 0;
+  let redCount = 0;
+  let grayCount = 0;
+  for (const key of order) {
+    const m = articleMastery(groups[key]);
+    if (m === "red") redCount += 1;
+    else if (m === "teal") tealCount += 1;
+    else grayCount += 1;
+  }
+  els.jobunMasterySummary.innerHTML = `
+    <div><div class="stat-num">${tealCount}</div><div class="stat-label">習得済み</div></div>
+    <div><div class="stat-num">${redCount}</div><div class="stat-label">要復習</div></div>
+    <div><div class="stat-num">${grayCount}</div><div class="stat-label">未学習</div></div>
+  `;
+
+  if (typeof Chart !== "undefined") {
+    const tags = jobunSubjectTags();
+    const data = tags.map((t) => {
+      const s = jobunSubjectStats(t);
+      return s.attempted > 0 ? Math.round((s.correct / s.attempted) * 100) : 0;
+    });
+    if (charts.jobunSubjectBar) charts.jobunSubjectBar.destroy();
+    charts.jobunSubjectBar = new Chart(els.chartJobunSubjectBar, {
+      type: "bar",
+      data: { labels: tags, datasets: [{ label: "正答率(%)", data, backgroundColor: "#14b8a6", borderRadius: 6 }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { min: 0, max: 100, ticks: { stepSize: 20 } } },
+        plugins: { legend: { display: false } },
+      },
+    });
+
+    const days = jobunLast7DaysCounts();
+    if (charts.jobunDaily) charts.jobunDaily.destroy();
+    charts.jobunDaily = new Chart(els.chartJobunDaily, {
+      type: "bar",
+      data: {
+        labels: days.map((d) => d.label),
+        datasets: [{ label: "解答数", data: days.map((d) => d.count), backgroundColor: "#5eead4", borderRadius: 6 }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        plugins: { legend: { display: false } },
+      },
+    });
+  }
+
+  const history = loadJobunHistory();
+  const ranked = order
+    .map((key) => {
+      const entries = groups[key];
+      const incorrect = entries.reduce((sum, a) => sum + ((history[a.id] && history[a.id].incorrect) || 0), 0);
+      return { entries, incorrect, law: entries[0].law, article: entries[0].article };
+    })
+    .filter((r) => r.incorrect > 0)
+    .sort((a, b) => b.incorrect - a.incorrect)
+    .slice(0, 15);
+
+  els.jobunWeakRankingList.innerHTML = "";
+  if (ranked.length === 0) {
+    els.jobunWeakRankingList.innerHTML = `<p class="empty-note">まだ間違えた条文がありません。</p>`;
+  } else {
+    ranked.forEach((r, i) => {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "weak-rank-item";
+      row.innerHTML = `
+        <span class="weak-rank-num">${i + 1}</span>
+        <span class="weak-rank-body">
+          <span class="weak-rank-meta">${escapeHtml(r.law)}</span>
+          <span class="weak-rank-text">${escapeHtml(r.article)}</span>
+        </span>
+        <span class="weak-rank-count">✕${r.incorrect}</span>
+      `;
+      row.addEventListener("click", () => startJobunSession(r.entries, `${r.law} ${r.article}`));
+      els.jobunWeakRankingList.appendChild(row);
+    });
+  }
+}
+
+function switchAnalysisMode(mode) {
+  state.analysisMode = mode;
+  els.analysisTabTaku.classList.toggle("active", mode === "taku");
+  els.analysisTabJobun.classList.toggle("active", mode === "jobun");
+  els.analysisTaku.hidden = mode !== "taku";
+  els.analysisJobun.hidden = mode !== "jobun";
+  if (mode === "taku") renderAnalysisTaku();
+  else renderAnalysisJobun();
+}
+
+// ---------- 学習履歴リセット ----------
+
+function resetHistory() {
+  if (!confirm("択一トレの学習履歴をすべてリセットします。よろしいですか？")) return;
+  localStorage.removeItem(HISTORY_KEY);
+  localStorage.removeItem(DAILY_KEY);
+  if (state.mode === "taku") renderHome();
+}
+
+function resetJobunHistory() {
+  if (!confirm("条文トレの学習履歴をすべてリセットします。よろしいですか？")) return;
+  localStorage.removeItem(JOBUN_HISTORY_KEY);
+  localStorage.removeItem(JOBUN_DAILY_KEY);
+  localStorage.removeItem(JOBUN_BOOKMARK_KEY);
+  if (state.mode === "jobun") renderJobunHome();
+}
+
 // ---------- export / import ----------
 
 function exportData() {
-  const payload = { app: "srquiz", version: 1, exportedAt: new Date().toISOString(), data: {} };
+  const payload = { app: "srquiz", version: 2, exportedAt: new Date().toISOString(), data: {} };
   for (const key of APP_STORAGE_KEYS) {
     const raw = localStorage.getItem(key);
     if (raw !== null) {
@@ -1084,7 +1625,7 @@ function importDataFromFile(file) {
       alert("バックアップファイルの形式が正しくありません。");
       return;
     }
-    if (!confirm("現在の学習履歴・ノートを上書きしてインポートします。よろしいですか？")) return;
+    if (!confirm("現在の学習履歴・ノート(択一トレ・条文トレ両方)を上書きしてインポートします。よろしいですか？")) return;
     for (const key of APP_STORAGE_KEYS) {
       if (key in parsed.data) {
         localStorage.setItem(key, JSON.stringify(parsed.data[key]));
@@ -1105,19 +1646,24 @@ function cacheEls() {
   const ids = [
     "btnBack",
     "headerTitle",
-    "btnHeaderStats",
-    "btnHeaderSettings",
+    "bottomNav",
+    "navNotes",
+    "navAnalysis",
+    "navSearch",
+    "navSettings",
+    "modeTabTaku",
+    "modeTabJobun",
+    "modeHomeTaku",
+    "modeHomeJobun",
     "searchInput",
     "btnSearchClear",
     "searchResults",
     "searchResultsCount",
     "searchQuestionList",
+    "searchArticleList",
     "searchNoteList",
-    "searchNormalContent",
-    "btnGoNotes",
-    "btnGoAnalysis",
+    "searchEmptyNote",
     "yearChipsHome",
-    "yearChipsStats",
     "subjectGrid",
     "btnRandomAll",
     "btnReview",
@@ -1144,9 +1690,29 @@ function cacheEls() {
     "sessionBreakdown",
     "btnRetryWrong",
     "btnBackHome",
-    "statsOverall",
-    "statsBySubject",
-    "btnResetHistory",
+    "btnJobunAuto",
+    "btnJobunList",
+    "btnJobunBookmarks",
+    "jobunBookmarkCount",
+    "chartJobunHomeDaily",
+    "jobunLawGroups",
+    "jobunProgressBar",
+    "jobunProgressText",
+    "jobunArticleTag",
+    "jobunArticleText",
+    "btnJobunDontKnow",
+    "jobunChoiceGrid",
+    "jobunSessionCounter",
+    "jobunFeedback",
+    "jobunFeedbackText",
+    "jobunPostActions",
+    "btnJobunRetry",
+    "btnJobunBookmark",
+    "btnJobunNext",
+    "jobunSessionScore",
+    "jobunSessionScoreRate",
+    "jobunSessionBreakdown",
+    "btnJobunBackHome",
     "btnNewNote",
     "noteFilterChips",
     "notesList",
@@ -1160,14 +1726,24 @@ function cacheEls() {
     "noteEditBody",
     "btnSaveNote",
     "btnDeleteNote",
+    "analysisTabTaku",
+    "analysisTabJobun",
+    "analysisTaku",
+    "analysisJobun",
     "yearChipsAnalysis",
     "chartRadar",
     "chartYearBar",
     "chartDaily",
     "btnWeakSubjects",
     "weakRankingList",
+    "jobunMasterySummary",
+    "chartJobunSubjectBar",
+    "chartJobunDaily",
+    "jobunWeakRankingList",
     "btnExportData",
     "importFileInput",
+    "btnResetHistory",
+    "btnResetJobunHistory",
     "updateToast",
     "btnUpdateNow",
     "btnDismissUpdate",
@@ -1185,11 +1761,25 @@ function bindEvents() {
     }
     showScreen("screen-home");
   });
-  els.btnHeaderStats.addEventListener("click", () => {
-    renderStats();
-    showScreen("screen-stats");
+
+  // モード切替
+  els.modeTabTaku.addEventListener("click", () => switchMode("taku"));
+  els.modeTabJobun.addEventListener("click", () => switchMode("jobun"));
+
+  // 下部ナビゲーション
+  els.navNotes.addEventListener("click", () => {
+    renderNotesList();
+    showScreen("screen-notes");
   });
-  els.btnHeaderSettings.addEventListener("click", () => showScreen("screen-settings"));
+  els.navAnalysis.addEventListener("click", () => {
+    switchAnalysisMode(state.analysisMode);
+    showScreen("screen-analysis");
+  });
+  els.navSearch.addEventListener("click", () => {
+    renderSearchResults(els.searchInput.value);
+    showScreen("screen-search");
+  });
+  els.navSettings.addEventListener("click", () => showScreen("screen-settings"));
 
   // 検索
   let searchDebounceId = null;
@@ -1204,22 +1794,14 @@ function bindEvents() {
     els.searchInput.focus();
   });
 
-  // ホーム
-  els.btnGoNotes.addEventListener("click", () => {
-    renderNotesList();
-    showScreen("screen-notes");
-  });
-  els.btnGoAnalysis.addEventListener("click", () => {
-    renderAnalysis();
-    showScreen("screen-analysis");
-  });
+  // 択一トレ ホーム
   els.btnRandomAll.addEventListener("click", () => {
     const yearLabel = state.selectedYear === "ALL" ? "全年度" : state.selectedYear;
     startSession(filteredQuestions(), `ランダム出題（${yearLabel}）`);
   });
   els.btnReview.addEventListener("click", () => startSession(getWrongQuestions(), "復習モード"));
 
-  // クイズ
+  // 択一クイズ
   els.btnNext.addEventListener("click", nextQuestion);
   els.btnNextFromSheet.addEventListener("click", nextQuestion);
   els.btnShowExplanation.addEventListener("click", openSheet);
@@ -1240,8 +1822,32 @@ function bindEvents() {
   });
   els.btnRetryWrong.addEventListener("click", retryWrongFromSession);
 
-  // 成績
-  els.btnResetHistory.addEventListener("click", resetHistory);
+  // 条文トレ ホーム
+  els.btnJobunAuto.addEventListener("click", () => startJobunSession(composeJobunAutoSession(50), "おまかせ出題"));
+  els.btnJobunList.addEventListener("click", () => {
+    renderJobunList();
+    showScreen("screen-jobun-list");
+  });
+  els.btnJobunBookmarks.addEventListener("click", () => {
+    const ids = loadJobunBookmarks();
+    const entries = state.articles.filter((a) => ids.includes(a.id));
+    startJobunSession(entries, "ブックマーク");
+  });
+
+  // 条文トレ 出題
+  els.btnJobunDontKnow.addEventListener("click", jobunDontKnow);
+  els.btnJobunRetry.addEventListener("click", renderJobunQuestion);
+  els.btnJobunBookmark.addEventListener("click", () => {
+    const entry = jobunCurrentQuestion();
+    toggleJobunBookmark(entry.id);
+    updateJobunBookmarkButton();
+  });
+  els.btnJobunNext.addEventListener("click", nextJobunQuestion);
+  els.btnJobunBackHome.addEventListener("click", () => {
+    state.jobunSession = null;
+    renderJobunHome();
+    showScreen("screen-home");
+  });
 
   // ノート
   els.btnNewNote.addEventListener("click", () => openNoteEditor(null));
@@ -1269,6 +1875,8 @@ function bindEvents() {
   });
 
   // 分析
+  els.analysisTabTaku.addEventListener("click", () => switchAnalysisMode("taku"));
+  els.analysisTabJobun.addEventListener("click", () => switchAnalysisMode("jobun"));
   els.btnWeakSubjects.addEventListener("click", startWeakSubjectsSession);
 
   // 設定
@@ -1278,6 +1886,8 @@ function bindEvents() {
     if (file) importDataFromFile(file);
     e.target.value = "";
   });
+  els.btnResetHistory.addEventListener("click", resetHistory);
+  els.btnResetJobunHistory.addEventListener("click", resetJobunHistory);
 
   els.btnUpdateNow.addEventListener("click", () => window.location.reload());
   els.btnDismissUpdate.addEventListener("click", hideUpdateToast);
@@ -1320,7 +1930,7 @@ async function init() {
   cacheEls();
   bindEvents();
 
-  // questions.json の取得成否に関わらず、SW登録/更新検知は必ず行う。
+  // questions.json / articles.json の取得成否に関わらず、SW登録/更新検知は必ず行う。
   // (取得を先に待つ構造だと、通信が不安定な瞬間に開いた場合にSW登録自体が
   // スキップされ、アプリの更新が永久に検知されなくなる不具合があった。)
   if ("serviceWorker" in navigator) {
@@ -1330,30 +1940,35 @@ async function init() {
       .catch(() => {});
   }
 
-  try {
-    const res = await fetch("./questions.json");
-    state.questions = await res.json();
-  } catch (err) {
+  const [questionsResult, articlesResult] = await Promise.allSettled([
+    fetch("./questions.json").then((res) => res.json()),
+    fetch("./articles.json").then((res) => res.json()),
+  ]);
+
+  if (questionsResult.status === "fulfilled") {
+    state.questions = questionsResult.value;
+    const seen = new Set();
+    state.subjects = [];
+    const seenYears = new Set();
+    state.years = [];
+    for (const q of state.questions) {
+      if (!seen.has(q.subject)) {
+        seen.add(q.subject);
+        state.subjects.push(q.subject);
+      }
+      if (!seenYears.has(q.year)) {
+        seenYears.add(q.year);
+        state.years.push(q.year);
+      }
+    }
+  } else {
     els.subjectGrid.innerHTML = `<p class="empty-note">問題データを読み込めませんでした。オンライン状態で一度アクセスしてください。</p>`;
-    return;
   }
 
-  const seen = new Set();
-  state.subjects = [];
-  const seenYears = new Set();
-  state.years = [];
-  for (const q of state.questions) {
-    if (!seen.has(q.subject)) {
-      seen.add(q.subject);
-      state.subjects.push(q.subject);
-    }
-    if (!seenYears.has(q.year)) {
-      seenYears.add(q.year);
-      state.years.push(q.year);
-    }
-  }
+  state.articles = articlesResult.status === "fulfilled" ? articlesResult.value : [];
 
-  renderHome();
+  state.mode = localStorage.getItem(MODE_KEY) === "jobun" ? "jobun" : "taku";
+  applyMode();
   showScreen("screen-home");
 }
 

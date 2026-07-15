@@ -20,41 +20,19 @@
 <header class="app-header">
   <button id="btnBack" class="icon-btn" hidden aria-label="戻る">←</button>
   <h1 id="headerTitle">社労士 過去問クイズ</h1>
-  <button id="btnHeaderStats" class="icon-btn" aria-label="成績">📊</button>
-  <button id="btnHeaderSettings" class="icon-btn" aria-label="設定">⚙️</button>
 </header>
 
 <main id="app">
 
-  <!-- 科目選択画面 -->
+  <!-- ホーム画面(モード切替タブ + 各モードのホーム) -->
   <section id="screen-home" class="screen active">
-    <div class="search-bar">
-      <input type="search" id="searchInput" class="search-input" placeholder="🔍 問題・解説・ノートを検索" autocomplete="off">
-      <button id="btnSearchClear" class="search-clear-btn" hidden aria-label="検索をクリア">✕</button>
+    <div class="mode-tabs" id="modeTabs">
+      <button type="button" class="mode-tab" id="modeTabTaku" data-mode="taku">📖 択一トレ</button>
+      <button type="button" class="mode-tab" id="modeTabJobun" data-mode="jobun">✏️ 条文トレ</button>
     </div>
 
-    <div id="searchResults" class="search-results" hidden>
-      <p class="search-results-count" id="searchResultsCount"></p>
-      <div class="search-results-section">
-        <h3 class="search-results-heading">問題</h3>
-        <div id="searchQuestionList"></div>
-      </div>
-      <div class="search-results-section">
-        <h3 class="search-results-heading">ノート</h3>
-        <div id="searchNoteList"></div>
-      </div>
-    </div>
-
-    <div id="searchNormalContent">
-      <div class="feature-nav">
-        <button id="btnGoNotes" type="button" class="feature-nav-btn">
-          <span class="feature-nav-icon">📓</span><span>ノート</span>
-        </button>
-        <button id="btnGoAnalysis" type="button" class="feature-nav-btn">
-          <span class="feature-nav-icon">📊</span><span>分析</span>
-        </button>
-      </div>
-
+    <!-- 択一トレ ホーム -->
+    <div id="modeHomeTaku">
       <p class="lead">年度と科目を選んで学習を始めましょう</p>
       <div class="year-chips" id="yearChipsHome"></div>
       <div class="subject-grid" id="subjectGrid"></div>
@@ -66,9 +44,27 @@
         </button>
       </div>
     </div>
+
+    <!-- 条文トレ ホーム -->
+    <div id="modeHomeJobun" hidden>
+      <p class="lead">条文の穴埋めで正確な知識を定着させましょう</p>
+
+      <div class="home-actions">
+        <button id="btnJobunAuto" class="btn btn-primary">🎲 おまかせ出題</button>
+        <button id="btnJobunList" class="btn btn-outline">📜 条文一覧</button>
+        <button id="btnJobunBookmarks" class="btn btn-outline">
+          🔖 ブックマーク <span class="badge" id="jobunBookmarkCount">0</span>
+        </button>
+      </div>
+
+      <div class="analysis-card">
+        <p class="analysis-card-title">直近7日間の解答数</p>
+        <div class="chart-wrap chart-wrap-small"><canvas id="chartJobunHomeDaily"></canvas></div>
+      </div>
+    </div>
   </section>
 
-  <!-- クイズ画面 -->
+  <!-- 択一クイズ画面 -->
   <section id="screen-quiz" class="screen">
     <div class="quiz-topbar">
       <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
@@ -93,7 +89,7 @@
     </div>
   </section>
 
-  <!-- セッション結果画面 -->
+  <!-- 択一セッション結果画面 -->
   <section id="screen-session-result" class="screen">
     <h2>お疲れさまでした</h2>
     <p class="score-big" id="sessionScore">0 / 0</p>
@@ -105,14 +101,49 @@
     </div>
   </section>
 
-  <!-- 成績画面 -->
-  <section id="screen-stats" class="screen">
-    <h2>成績</h2>
-    <div class="year-chips" id="yearChipsStats"></div>
-    <div class="stats-overall" id="statsOverall"></div>
-    <div class="stats-subject-list" id="statsBySubject"></div>
+  <!-- 条文一覧画面 -->
+  <section id="screen-jobun-list" class="screen">
+    <h2>条文一覧</h2>
+    <div id="jobunLawGroups"></div>
+  </section>
+
+  <!-- 条文トレ出題画面 -->
+  <section id="screen-jobun-quiz" class="screen">
+    <div class="quiz-topbar">
+      <div class="progress-track"><div class="progress-bar" id="jobunProgressBar"></div></div>
+      <span class="progress-text" id="jobunProgressText">1 / 10</span>
+    </div>
+
+    <div class="question-card jobun-card">
+      <p class="subject-tag" id="jobunArticleTag"></p>
+      <p class="jobun-article-text" id="jobunArticleText"></p>
+    </div>
+
+    <button type="button" id="btnJobunDontKnow" class="jobun-dontknow-btn" hidden>🤷 分からない(答えを見る)</button>
+
+    <div class="jobun-choice-grid" id="jobunChoiceGrid">
+      <div class="jobun-session-counter" id="jobunSessionCounter">0/0</div>
+    </div>
+
+    <div class="jobun-feedback" id="jobunFeedback" hidden>
+      <p class="feedback-text" id="jobunFeedbackText"></p>
+    </div>
+
+    <div class="post-answer-actions jobun-post-actions" id="jobunPostActions" hidden>
+      <button id="btnJobunRetry" class="btn btn-outline">🔁 もう1度</button>
+      <button id="btnJobunBookmark" class="btn btn-outline">🔖 ブックマーク</button>
+      <button id="btnJobunNext" class="btn btn-primary">次の問題へ →</button>
+    </div>
+  </section>
+
+  <!-- 条文トレ セッション結果画面 -->
+  <section id="screen-jobun-result" class="screen">
+    <h2>お疲れさまでした</h2>
+    <p class="score-big" id="jobunSessionScore">0 / 0</p>
+    <p class="score-sub" id="jobunSessionScoreRate"></p>
+    <div class="session-list" id="jobunSessionBreakdown"></div>
     <div class="home-actions">
-      <button id="btnResetHistory" class="btn btn-danger-outline">学習履歴をリセット</button>
+      <button id="btnJobunBackHome" class="btn btn-primary">条文トレホームに戻る</button>
     </div>
   </section>
 
@@ -154,29 +185,86 @@
   <!-- 分析画面 -->
   <section id="screen-analysis" class="screen">
     <h2>分析</h2>
-    <div class="year-chips" id="yearChipsAnalysis"></div>
-
-    <div class="analysis-card">
-      <p class="analysis-card-title">科目別正答率</p>
-      <div class="chart-wrap chart-wrap-radar"><canvas id="chartRadar"></canvas></div>
+    <div class="mode-tabs mode-tabs-small" id="analysisModeTabs">
+      <button type="button" class="mode-tab" id="analysisTabTaku" data-mode="taku">📖 択一</button>
+      <button type="button" class="mode-tab" id="analysisTabJobun" data-mode="jobun">✏️ 条文</button>
     </div>
 
-    <div class="analysis-card">
-      <p class="analysis-card-title">年度別正答率</p>
-      <div class="chart-wrap"><canvas id="chartYearBar"></canvas></div>
+    <!-- 択一の分析 -->
+    <div id="analysisTaku">
+      <div class="year-chips" id="yearChipsAnalysis"></div>
+
+      <div class="analysis-card">
+        <p class="analysis-card-title">科目別正答率</p>
+        <div class="chart-wrap chart-wrap-radar"><canvas id="chartRadar"></canvas></div>
+      </div>
+
+      <div class="analysis-card">
+        <p class="analysis-card-title">年度別正答率</p>
+        <div class="chart-wrap"><canvas id="chartYearBar"></canvas></div>
+      </div>
+
+      <div class="analysis-card">
+        <p class="analysis-card-title">直近7日間の学習量</p>
+        <div class="chart-wrap chart-wrap-small"><canvas id="chartDaily"></canvas></div>
+      </div>
+
+      <button id="btnWeakSubjects" type="button" class="btn btn-primary">🎯 苦手科目だけを集中出題</button>
+
+      <div class="analysis-card">
+        <p class="analysis-card-title">苦手問題ランキング</p>
+        <div id="weakRankingList" class="weak-ranking-list"></div>
+      </div>
     </div>
 
-    <div class="analysis-card">
-      <p class="analysis-card-title">直近7日間の学習量</p>
-      <div class="chart-wrap chart-wrap-small"><canvas id="chartDaily"></canvas></div>
+    <!-- 条文トレの分析 -->
+    <div id="analysisJobun" hidden>
+      <div class="analysis-card">
+        <p class="analysis-card-title">習熟度サマリー</p>
+        <div class="stats-overall" id="jobunMasterySummary"></div>
+      </div>
+
+      <div class="analysis-card">
+        <p class="analysis-card-title">科目別正答率</p>
+        <div class="chart-wrap"><canvas id="chartJobunSubjectBar"></canvas></div>
+      </div>
+
+      <div class="analysis-card">
+        <p class="analysis-card-title">直近7日間の学習量</p>
+        <div class="chart-wrap chart-wrap-small"><canvas id="chartJobunDaily"></canvas></div>
+      </div>
+
+      <div class="analysis-card">
+        <p class="analysis-card-title">苦手条文ランキング</p>
+        <div id="jobunWeakRankingList" class="weak-ranking-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 検索画面 -->
+  <section id="screen-search" class="screen">
+    <h2>検索</h2>
+    <div class="search-bar">
+      <input type="search" id="searchInput" class="search-input" placeholder="🔍 問題・条文・解説・ノートを検索" autocomplete="off">
+      <button id="btnSearchClear" class="search-clear-btn" hidden aria-label="検索をクリア">✕</button>
     </div>
 
-    <button id="btnWeakSubjects" type="button" class="btn btn-primary">🎯 苦手科目だけを集中出題</button>
-
-    <div class="analysis-card">
-      <p class="analysis-card-title">苦手問題ランキング</p>
-      <div id="weakRankingList" class="weak-ranking-list"></div>
+    <div id="searchResults" class="search-results" hidden>
+      <p class="search-results-count" id="searchResultsCount"></p>
+      <div class="search-results-section">
+        <h3 class="search-results-heading">問題(択一)</h3>
+        <div id="searchQuestionList"></div>
+      </div>
+      <div class="search-results-section">
+        <h3 class="search-results-heading">条文</h3>
+        <div id="searchArticleList"></div>
+      </div>
+      <div class="search-results-section">
+        <h3 class="search-results-heading">ノート</h3>
+        <div id="searchNoteList"></div>
+      </div>
     </div>
+    <p id="searchEmptyNote" class="empty-note">キーワードを入力して検索してください。</p>
   </section>
 
   <!-- 設定画面 -->
@@ -184,16 +272,38 @@
     <h2>設定</h2>
     <div class="settings-section">
       <p class="settings-desc">
-        学習履歴・ノートなど、このアプリのデータをまとめてバックアップ/復元できます。
+        学習履歴・ノートなど、このアプリのデータ(択一トレ・条文トレ両方)をまとめてバックアップ/復元できます。
         機種変更やブラウザのキャッシュ削除の前に、エクスポートしておくことをおすすめします。
       </p>
       <button id="btnExportData" type="button" class="btn btn-outline">📤 データをエクスポート</button>
       <label for="importFileInput" class="btn btn-outline file-btn">📥 データをインポート</label>
       <input type="file" id="importFileInput" accept="application/json" hidden>
     </div>
+
+    <div class="settings-section settings-section-danger">
+      <p class="settings-desc">学習履歴のリセットは元に戻せません。</p>
+      <button id="btnResetHistory" class="btn btn-danger-outline">択一トレの学習履歴をリセット</button>
+      <button id="btnResetJobunHistory" class="btn btn-danger-outline">条文トレの学習履歴をリセット</button>
+    </div>
   </section>
 
 </main>
+
+<!-- 共通下部ナビゲーション -->
+<nav class="bottom-nav" id="bottomNav">
+  <button type="button" class="bottom-nav-btn" id="navNotes" data-screen="screen-notes">
+    <span class="bottom-nav-icon">📓</span><span>ノート</span>
+  </button>
+  <button type="button" class="bottom-nav-btn" id="navAnalysis" data-screen="screen-analysis">
+    <span class="bottom-nav-icon">📊</span><span>分析</span>
+  </button>
+  <button type="button" class="bottom-nav-btn" id="navSearch" data-screen="screen-search">
+    <span class="bottom-nav-icon">🔍</span><span>検索</span>
+  </button>
+  <button type="button" class="bottom-nav-btn" id="navSettings" data-screen="screen-settings">
+    <span class="bottom-nav-icon">⚙️</span><span>設定</span>
+  </button>
+</nav>
 
 <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
 <div class="explanation-sheet" id="explanationSheet" hidden aria-hidden="true">
