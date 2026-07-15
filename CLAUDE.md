@@ -1,28 +1,32 @@
 # sharoushi-quiz
 
-社労士試験 択一式過去問クイズ(PWA)。`index.html` / `style.css` / `app.js` / `manifest.json` / `questions.json` / `icons/*` を Service Worker (`sw.js`) でキャッシュし、オフラインでも動作する。
+社労士試験 択一式過去問クイズ(PWA)。`index.html` / `style.css` / `app.js` / `manifest.json` / `vendor/chart.umd.min.js` / `questions.json` / `icons/*` を Service Worker (`sw.js`) でキャッシュし、オフラインでも動作する。
 
-## Service Worker のキャッシュ更新について【重要】
+## Service Worker のキャッシュ戦略【重要】
 
-`sw.js` はアプリ本体一式 (`APP_SHELL`) をキャッシュファースト戦略で配信している。ブラウザは **`sw.js` 自体のバイト列が変わったときだけ** 新しいService Workerの更新を検知する。
+`sw.js` の配信戦略はリソースによって異なる。
 
-**そのため、以下のいずれかのファイルを1文字でも変更したら、`sw.js` の `CACHE_VERSION` を必ずインクリメントすること。**
+- **network-first**(オンライン時は常に最新を取得し、オフライン時のみキャッシュにフォールバック): `questions.json`、ナビゲーションリクエスト(`index.html` = PWAの入口)
+- **cache-first**: それ以外の `APP_SHELL`(`style.css` / `app.js` / `manifest.json` / `vendor/chart.umd.min.js` / `icons/*`)
 
-- `index.html`
-- `style.css`
-- `app.js`
-- `manifest.json`
-- `questions.json`
-- `icons/` 配下のファイル
+`questions.json` と `index.html` が network-first なのは、iOSホーム画面PWAが古いキャッシュに固定されて起動不能になる事故を防ぐため(詳細はコミット履歴参照)。`questions.json`(1MB超)は install 時のプリキャッシュ対象からも除外している。cache.addAll() は1ファイルでも失敗すると全体が失敗し、大容量ファイルのフェッチ失敗がSWのインストールごと失敗させる主因になっていた。
 
-`CACHE_VERSION` を上げ忘れると、`sw.js` のバイト列が変化しないため更新が一切検知されず、ユーザーには古いキャッシュが無期限に配信され続ける(オフラインはもちろん、オンライン時でもキャッシュファーストのため新しい内容が反映されない)。
+ブラウザは **`sw.js` 自体のバイト列が変わったときだけ** 新しいService Workerの更新を検知する。
+
+**そのため、cache-first で配信されるファイル(`style.css` / `app.js` / `manifest.json` / `vendor/` 配下 / `icons/` 配下)のいずれかを1文字でも変更したら、`sw.js` の `CACHE_VERSION` を必ずインクリメントすること。**(`questions.json` と `index.html` は network-first のため理論上は不要だが、更新トースト通知([`app.js`](app.js)の`watchForServiceWorkerUpdate`)を確実に発火させるため、アプリファイルを変更した際は慣習として毎回上げてよい。)
+
+`CACHE_VERSION` を上げ忘れると、cache-first対象ファイルについては `sw.js` のバイト列が変化しないため更新が一切検知されず、ユーザーには古いキャッシュが無期限に配信され続ける。
 
 更新の反映自体(`skipWaiting` / `clients.claim` による新SWの即時有効化、旧キャッシュの自動削除)は `sw.js` 側で実装済みなので、`CACHE_VERSION` さえ上げれば自動的に伝播する。
 
 ```js
 // sw.js
-const CACHE_VERSION = "v2"; // ← ファイルを変更したらここをインクリメント
+const CACHE_VERSION = "v12"; // ← ファイルを変更したらここをインクリメント
 ```
+
+## vendor/ について
+
+`vendor/chart.umd.min.js` は分析画面のグラフ描画に使う Chart.js(jsDelivr CDN経由で取得したUMDビルド)をリポジトリ内に保存したもの。CDN直リンクではなく自ホストにしているのは、オフラインでも分析画面が使えるようにするため(Service Workerで他のアプリ本体ファイルと同様にプリキャッシュしている)。Chart.jsを更新する場合は該当ファイルを差し替え、`CACHE_VERSION` を上げること。
 
 ## デプロイについて
 

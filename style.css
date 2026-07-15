@@ -426,11 +426,15 @@ h2 {
   background: rgba(15, 61, 62, 0.5);
   z-index: 90;
   opacity: 0;
+  /* 閉じるアニメーション中(hidden属性が付くまでの間)に、下に隠れた画面への
+     クリックをブロックしないよう、openクラスがある間だけ操作可能にする。 */
+  pointer-events: none;
   transition: opacity 0.25s ease;
 }
 
 .sheet-backdrop.open {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .explanation-sheet {
@@ -448,11 +452,13 @@ h2 {
   display: flex;
   flex-direction: column;
   transform: translateY(100%);
+  pointer-events: none;
   transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
 .explanation-sheet.open {
+  pointer-events: auto;
   transform: translateY(0);
 }
 
@@ -743,6 +749,396 @@ h2 {
 
 @media (min-width: 480px) {
   .subject-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* ---------- Search bar ---------- */
+.search-bar {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 40px 12px 14px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  background: var(--card-bg);
+  font-size: 0.92rem;
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+.search-input::-webkit-search-cancel-button { display: none; }
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--teal-500);
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--teal-100);
+  color: var(--teal-700);
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-results-count {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  margin: 0 0 12px;
+}
+
+.search-results-section { margin-bottom: 18px; }
+
+.search-results-heading {
+  color: var(--teal-700);
+  font-size: 0.85rem;
+  margin: 0 0 8px;
+}
+
+.search-result-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 11px 13px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.search-result-item:active { background: var(--teal-50); }
+
+.search-result-meta {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--teal-600);
+  margin-bottom: 4px;
+}
+
+.search-result-snippet {
+  display: block;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.search-result-snippet mark {
+  background: #fde68a;
+  color: var(--ink);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+/* ---------- Feature nav (home quick links) ---------- */
+.feature-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.feature-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 10px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  color: var(--teal-900);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.feature-nav-btn:active { transform: scale(0.97); }
+
+.feature-nav-icon { font-size: 1.4rem; }
+
+/* ---------- Notes ---------- */
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.note-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 13px 15px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.note-card:active { transform: scale(0.98); }
+
+.note-card-title {
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.note-card-snippet {
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin-bottom: 8px;
+  white-space: pre-wrap;
+}
+
+.note-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.note-card-date {
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+}
+
+/* ---------- Tag chips (subject / free tags) ---------- */
+.tag-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--teal-500);
+  background: white;
+  color: var(--teal-700);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tag-chip.active {
+  background: var(--teal-600);
+  border-color: var(--teal-600);
+  color: white;
+}
+
+.tag-chip.small {
+  padding: 3px 9px;
+  font-size: 0.68rem;
+  border-width: 1px;
+  cursor: default;
+}
+
+.tag-chip.removable {
+  background: var(--teal-100);
+  border-color: var(--teal-100);
+  color: var(--teal-700);
+  cursor: default;
+}
+
+.tag-chip.removable button {
+  background: none;
+  border: none;
+  color: var(--teal-700);
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+/* ---------- Note editor form ---------- */
+.form-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--teal-700);
+  margin: 14px 0 6px;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 12px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--card-bg);
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--teal-500);
+}
+
+.form-textarea {
+  resize: vertical;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.note-linked-question { margin-bottom: 4px; }
+
+.note-linked-question-btn {
+  width: 100%;
+  text-align: left;
+  background: var(--teal-50);
+  border: 1.5px solid var(--teal-300);
+  color: var(--teal-700);
+  border-radius: 10px;
+  padding: 10px 13px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.note-edit-actions {
+  margin-top: 20px;
+}
+
+/* ---------- Analysis ---------- */
+.analysis-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+}
+
+.analysis-card-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--teal-700);
+  margin: 0 0 12px;
+}
+
+.chart-wrap {
+  position: relative;
+  width: 100%;
+  height: 220px;
+}
+
+.chart-wrap-radar { height: 280px; }
+.chart-wrap-small { height: 160px; }
+
+.weak-ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.weak-rank-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: #f7f7f8;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 11px;
+  cursor: pointer;
+}
+
+.weak-rank-item:active { background: var(--teal-50); }
+
+.weak-rank-num {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--teal-600);
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.weak-rank-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.weak-rank-meta {
+  font-size: 0.7rem;
+  color: var(--teal-600);
+  font-weight: 700;
+}
+
+.weak-rank-text {
+  font-size: 0.82rem;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weak-rank-count {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--red-600);
+  background: var(--red-50);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+
+/* ---------- Settings ---------- */
+.settings-section {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+
+.settings-desc {
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  margin: 0 0 16px;
+}
+
+.file-btn {
+  display: block;
+  box-sizing: border-box;
+  text-align: center;
+  cursor: pointer;
 }
 
 /* ---------- Update toast ---------- */

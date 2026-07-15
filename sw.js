@@ -4,7 +4,7 @@
 // いずれかを変更したら、このバージョンを必ず上げること。
 // sw.js自体のバイト列が変わらないとブラウザは更新を検知せず、
 // 古いキャッシュが無期限に配信され続けてしまう。
-const CACHE_VERSION = "v11";
+const CACHE_VERSION = "v12";
 const CACHE_NAME = `srquiz-cache-${CACHE_VERSION}`;
 // questions.json(1MB超)はここに含めない。network-first で実行時にキャッシュされるため、
 // install時の事前キャッシュ対象から外し、install失敗の主因(大容量フェッチの失敗)を排除する。
@@ -14,6 +14,7 @@ const APP_SHELL = [
   "./style.css",
   "./app.js",
   "./manifest.json",
+  "./vendor/chart.umd.min.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
 ];

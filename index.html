@@ -21,21 +21,50 @@
   <button id="btnBack" class="icon-btn" hidden aria-label="戻る">←</button>
   <h1 id="headerTitle">社労士 過去問クイズ</h1>
   <button id="btnHeaderStats" class="icon-btn" aria-label="成績">📊</button>
+  <button id="btnHeaderSettings" class="icon-btn" aria-label="設定">⚙️</button>
 </header>
 
 <main id="app">
 
   <!-- 科目選択画面 -->
   <section id="screen-home" class="screen active">
-    <p class="lead">年度と科目を選んで学習を始めましょう</p>
-    <div class="year-chips" id="yearChipsHome"></div>
-    <div class="subject-grid" id="subjectGrid"></div>
+    <div class="search-bar">
+      <input type="search" id="searchInput" class="search-input" placeholder="🔍 問題・解説・ノートを検索" autocomplete="off">
+      <button id="btnSearchClear" class="search-clear-btn" hidden aria-label="検索をクリア">✕</button>
+    </div>
 
-    <div class="home-actions">
-      <button id="btnRandomAll" class="btn btn-primary">🔀 ランダム出題</button>
-      <button id="btnReview" class="btn btn-outline">
-        📝 復習モード <span class="badge" id="reviewCount">0</span>
-      </button>
+    <div id="searchResults" class="search-results" hidden>
+      <p class="search-results-count" id="searchResultsCount"></p>
+      <div class="search-results-section">
+        <h3 class="search-results-heading">問題</h3>
+        <div id="searchQuestionList"></div>
+      </div>
+      <div class="search-results-section">
+        <h3 class="search-results-heading">ノート</h3>
+        <div id="searchNoteList"></div>
+      </div>
+    </div>
+
+    <div id="searchNormalContent">
+      <div class="feature-nav">
+        <button id="btnGoNotes" type="button" class="feature-nav-btn">
+          <span class="feature-nav-icon">📓</span><span>ノート</span>
+        </button>
+        <button id="btnGoAnalysis" type="button" class="feature-nav-btn">
+          <span class="feature-nav-icon">📊</span><span>分析</span>
+        </button>
+      </div>
+
+      <p class="lead">年度と科目を選んで学習を始めましょう</p>
+      <div class="year-chips" id="yearChipsHome"></div>
+      <div class="subject-grid" id="subjectGrid"></div>
+
+      <div class="home-actions">
+        <button id="btnRandomAll" class="btn btn-primary">🔀 ランダム出題</button>
+        <button id="btnReview" class="btn btn-outline">
+          📝 復習モード <span class="badge" id="reviewCount">0</span>
+        </button>
+      </div>
     </div>
   </section>
 
@@ -87,6 +116,83 @@
     </div>
   </section>
 
+  <!-- ノート一覧画面 -->
+  <section id="screen-notes" class="screen">
+    <h2>ノート</h2>
+    <button id="btnNewNote" type="button" class="btn btn-primary">+ 新規作成</button>
+    <div class="year-chips" id="noteFilterChips"></div>
+    <div class="notes-list" id="notesList"></div>
+  </section>
+
+  <!-- ノート編集画面 -->
+  <section id="screen-note-edit" class="screen">
+    <h2 id="noteEditHeading">ノートを作成</h2>
+
+    <div id="noteLinkedQuestion" class="note-linked-question" hidden>
+      <button type="button" id="btnGoToLinkedQuestion" class="note-linked-question-btn"></button>
+    </div>
+
+    <label class="form-label" for="noteEditTitle">タイトル</label>
+    <input type="text" id="noteEditTitle" class="form-input" placeholder="タイトルを入力">
+
+    <label class="form-label">科目タグ</label>
+    <div class="tag-chip-row" id="noteSubjectTags"></div>
+
+    <label class="form-label" for="noteFreeTagInput">自由タグ</label>
+    <div class="tag-chip-row" id="noteFreeTagList"></div>
+    <input type="text" id="noteFreeTagInput" class="form-input" placeholder="タグを入力してEnter">
+
+    <label class="form-label" for="noteEditBody">本文</label>
+    <textarea id="noteEditBody" class="form-textarea" rows="14" placeholder="メモを入力"></textarea>
+
+    <div class="note-edit-actions">
+      <button id="btnSaveNote" type="button" class="btn btn-primary">保存</button>
+      <button id="btnDeleteNote" type="button" class="btn btn-danger-outline" hidden>このノートを削除</button>
+    </div>
+  </section>
+
+  <!-- 分析画面 -->
+  <section id="screen-analysis" class="screen">
+    <h2>分析</h2>
+    <div class="year-chips" id="yearChipsAnalysis"></div>
+
+    <div class="analysis-card">
+      <p class="analysis-card-title">科目別正答率</p>
+      <div class="chart-wrap chart-wrap-radar"><canvas id="chartRadar"></canvas></div>
+    </div>
+
+    <div class="analysis-card">
+      <p class="analysis-card-title">年度別正答率</p>
+      <div class="chart-wrap"><canvas id="chartYearBar"></canvas></div>
+    </div>
+
+    <div class="analysis-card">
+      <p class="analysis-card-title">直近7日間の学習量</p>
+      <div class="chart-wrap chart-wrap-small"><canvas id="chartDaily"></canvas></div>
+    </div>
+
+    <button id="btnWeakSubjects" type="button" class="btn btn-primary">🎯 苦手科目だけを集中出題</button>
+
+    <div class="analysis-card">
+      <p class="analysis-card-title">苦手問題ランキング</p>
+      <div id="weakRankingList" class="weak-ranking-list"></div>
+    </div>
+  </section>
+
+  <!-- 設定画面 -->
+  <section id="screen-settings" class="screen">
+    <h2>設定</h2>
+    <div class="settings-section">
+      <p class="settings-desc">
+        学習履歴・ノートなど、このアプリのデータをまとめてバックアップ/復元できます。
+        機種変更やブラウザのキャッシュ削除の前に、エクスポートしておくことをおすすめします。
+      </p>
+      <button id="btnExportData" type="button" class="btn btn-outline">📤 データをエクスポート</button>
+      <label for="importFileInput" class="btn btn-outline file-btn">📥 データをインポート</label>
+      <input type="file" id="importFileInput" accept="application/json" hidden>
+    </div>
+  </section>
+
 </main>
 
 <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
@@ -98,6 +204,7 @@
   </div>
   <div class="sheet-body" id="explanationCard"></div>
   <div class="sheet-footer">
+    <button id="btnAddToNote" class="btn btn-outline">📝 この問題をノートに追加</button>
     <button id="btnNextFromSheet" class="btn btn-primary">次の問題へ →</button>
   </div>
 </div>
@@ -110,6 +217,7 @@
   </div>
 </div>
 
+<script src="./vendor/chart.umd.min.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>
