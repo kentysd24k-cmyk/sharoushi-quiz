@@ -17,50 +17,141 @@
 </head>
 <body>
 
-<header class="app-header">
+<header class="app-header" id="appHeader">
   <button id="btnBack" class="icon-btn" hidden aria-label="戻る">←</button>
   <h1 id="headerTitle">社労士 過去問クイズ</h1>
 </header>
 
 <main id="app">
 
-  <!-- ホーム画面(モード切替タブ + 各モードのホーム) -->
+  <!-- ホーム画面(モード切替タブ + 各モードのCTA/機能グリッド) -->
   <section id="screen-home" class="screen active">
-    <div class="mode-tabs" id="modeTabs">
-      <button type="button" class="mode-tab" id="modeTabTaku" data-mode="taku">📖 択一トレ</button>
-      <button type="button" class="mode-tab" id="modeTabJobun" data-mode="jobun">✏️ 条文トレ</button>
-    </div>
-
-    <!-- 択一トレ ホーム -->
-    <div id="modeHomeTaku">
-      <p class="lead">年度と科目を選んで学習を始めましょう</p>
-      <div class="year-chips" id="yearChipsHome"></div>
-      <div class="subject-grid" id="subjectGrid"></div>
-
-      <div class="home-actions">
-        <button id="btnRandomAll" class="btn btn-primary">🔀 ランダム出題</button>
-        <button id="btnReview" class="btn btn-outline">
-          📝 復習モード <span class="badge" id="reviewCount">0</span>
+    <div class="home-hero">
+      <div class="home-hero-pattern" aria-hidden="true"></div>
+      <p class="home-hero-appname">社労士クイズ</p>
+      <div class="home-hero-modetabs" id="modeTabs">
+        <button type="button" class="home-hero-modetab" id="modeTabTaku" data-mode="taku">
+          <span class="home-hero-modetab-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9z"/><polyline points="9 13 11 15 15 10"/></svg>
+          </span>
+          択一トレ
+        </button>
+        <button type="button" class="home-hero-modetab" id="modeTabJobun" data-mode="jobun">
+          <span class="home-hero-modetab-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h9l3 3v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M9 9h6M9 13h6M9 17h3"/></svg>
+          </span>
+          条文トレ
         </button>
       </div>
     </div>
 
-    <!-- 条文トレ ホーム -->
-    <div id="modeHomeJobun" hidden>
-      <p class="lead">条文の穴埋めで正確な知識を定着させましょう</p>
-
-      <div class="home-actions">
-        <button id="btnJobunAuto" class="btn btn-primary">🎲 おまかせ出題</button>
-        <button id="btnJobunList" class="btn btn-outline">📜 条文一覧</button>
-        <button id="btnJobunBookmarks" class="btn btn-outline">
-          🔖 ブックマーク <span class="badge" id="jobunBookmarkCount">0</span>
-        </button>
+    <div class="home-hero-card">
+      <div class="home-hero-ring-row">
+        <div class="home-hero-ring-wrap" role="progressbar" aria-label="今日の学習目標の進捗" aria-valuemin="0" aria-valuemax="100" id="homeGoalRingWrap">
+          <svg class="home-hero-ring" viewBox="0 0 120 120" width="92" height="92">
+            <circle class="home-hero-ring-track" cx="60" cy="60" r="52"></circle>
+            <circle class="home-hero-ring-fill" id="homeHeroRingFill" cx="60" cy="60" r="52"></circle>
+          </svg>
+          <div class="home-hero-ring-center">
+            <span class="home-hero-ring-count"><span id="homeTodayCount">0</span><span class="home-hero-ring-slash">/</span><span id="homeTodayGoal">10</span></span>
+            <span class="home-hero-ring-label">今日の学習</span>
+          </div>
+        </div>
+        <div class="home-hero-ring-side">
+          <div class="home-hero-substat">
+            <span class="home-hero-substat-value" id="homeStreakValue">0</span>
+            <span class="home-hero-substat-label">日連続</span>
+          </div>
+          <p class="home-hero-goal-message" id="homeGoalMessage">あと10問</p>
+        </div>
       </div>
+    </div>
 
-      <div class="analysis-card">
-        <p class="analysis-card-title">直近7日間の解答数</p>
-        <div class="chart-wrap chart-wrap-small"><canvas id="chartJobunHomeDaily"></canvas></div>
-      </div>
+    <!-- 択一トレ: メインCTA -->
+    <button id="btnHomeRandom" type="button" class="home-cta">
+      <span class="home-cta-icon" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor" stroke="none"/></svg>
+      </span>
+      <span class="home-cta-text">
+        <span class="home-cta-label">ランダム出題</span>
+        <span class="home-cta-sub">全年度からランダムに出題</span>
+      </span>
+      <span class="home-cta-arrow" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+      </span>
+    </button>
+
+    <!-- 条文トレ: メインCTA -->
+    <button id="btnJobunAuto" type="button" class="home-cta" hidden>
+      <span class="home-cta-icon" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h3.5l8 12H21"/><path d="M14.5 6H21"/><path d="M3 18h3.5l2.5-3.8"/><polyline points="18 3 21 6 18 9"/><polyline points="18 15 21 18 18 21"/></svg>
+      </span>
+      <span class="home-cta-text">
+        <span class="home-cta-label">おまかせ出題</span>
+        <span class="home-cta-sub">苦手・未学習を優先して50問</span>
+      </span>
+      <span class="home-cta-arrow" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+      </span>
+    </button>
+
+    <div class="home-feature-grid">
+      <!-- スロット1: モード別 -->
+      <button id="btnSubjectSelect" type="button" class="home-feature-card" data-mode-item="taku">
+        <span class="home-feature-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
+        </span>
+        <span class="home-feature-label">年度・科目</span>
+      </button>
+      <button id="btnJobunList" type="button" class="home-feature-card" data-mode-item="jobun" hidden>
+        <span class="home-feature-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3" y2="6"/><line x1="3" y1="12" x2="3" y2="12"/><line x1="3" y1="18" x2="3" y2="18"/></svg>
+        </span>
+        <span class="home-feature-label">条文一覧</span>
+      </button>
+
+      <!-- スロット2: モード別 -->
+      <button id="btnReview" type="button" class="home-feature-card" data-mode-item="taku">
+        <span class="home-feature-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+        </span>
+        <span class="home-feature-label">復習モード</span>
+        <span class="home-feature-badge" id="reviewCount" hidden>0</span>
+      </button>
+      <button id="btnJobunBookmarks" type="button" class="home-feature-card" data-mode-item="jobun" hidden>
+        <span class="home-feature-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        </span>
+        <span class="home-feature-label">ブックマーク</span>
+        <span class="home-feature-badge" id="jobunBookmarkCount" hidden>0</span>
+      </button>
+
+      <!-- スロット3・4: 共通 -->
+      <button id="btnHomeNotes" type="button" class="home-feature-card">
+        <span class="home-feature-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="3" x2="8" y2="21"/><line x1="12" y1="8" x2="17" y2="8"/><line x1="12" y1="12" x2="17" y2="12"/></svg>
+        </span>
+        <span class="home-feature-label">ノート</span>
+      </button>
+      <button id="btnHomeAnalysis" type="button" class="home-feature-card">
+        <span class="home-feature-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="14"/></svg>
+        </span>
+        <span class="home-feature-label">分析</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- 択一トレ: 年度・科目選択画面 -->
+  <section id="screen-subject-select" class="screen">
+    <h2>年度・科目を選ぶ</h2>
+    <div class="year-chips" id="yearChipsHome"></div>
+    <div class="subject-grid" id="subjectGrid"></div>
+    <div class="home-actions">
+      <button id="btnRandomAll" class="btn btn-primary">
+        <span class="btn-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor" stroke="none"/></svg></span>
+        <span id="btnRandomAllText">ランダム出題</span>
+      </button>
     </div>
   </section>
 
@@ -84,7 +175,7 @@
     </div>
 
     <div class="post-answer-actions" id="postAnswerActions" hidden>
-      <button id="btnShowExplanation" class="btn btn-outline">📖 解説を見る</button>
+      <button id="btnShowExplanation" class="btn btn-outline"><span class="btn-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>解説を見る</button>
       <button id="btnNext" class="btn btn-primary">次の問題へ →</button>
     </div>
   </section>
@@ -97,7 +188,7 @@
     <div class="session-list" id="sessionBreakdown"></div>
     <div class="home-actions">
       <button id="btnRetryWrong" class="btn btn-outline" hidden>間違えた問題だけ復習する</button>
-      <button id="btnBackHome" class="btn btn-primary">科目選択に戻る</button>
+      <button id="btnBackHome" class="btn btn-primary">ホームに戻る</button>
     </div>
   </section>
 
@@ -119,7 +210,10 @@
       <p class="jobun-article-text" id="jobunArticleText"></p>
     </div>
 
-    <button type="button" id="btnJobunDontKnow" class="jobun-dontknow-btn" hidden>🤷 分からない(答えを見る)</button>
+    <button type="button" id="btnJobunDontKnow" class="jobun-dontknow-btn" hidden>
+      <span class="btn-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.3 9a2.7 2.7 0 0 1 5.2 1c0 1.8-2.5 2-2.5 3.7"/><line x1="12" y1="17.2" x2="12" y2="17.21"/></svg></span>
+      分からない(答えを見る)
+    </button>
 
     <div class="jobun-choice-grid" id="jobunChoiceGrid">
       <div class="jobun-session-counter" id="jobunSessionCounter">0/0</div>
@@ -129,21 +223,27 @@
       <p class="feedback-text" id="jobunFeedbackText"></p>
     </div>
 
-    <div class="post-answer-actions jobun-post-actions" id="jobunPostActions" hidden>
-      <button id="btnJobunRetry" class="btn btn-outline">🔁 もう1度</button>
-      <button id="btnJobunBookmark" class="btn btn-outline">🔖 ブックマーク</button>
-      <button id="btnJobunNext" class="btn btn-primary">次の問題へ →</button>
+    <div class="jobun-post-actions" id="jobunPostActions" hidden>
+      <div class="jobun-post-actions-secondary">
+        <button id="btnJobunAddToNote" class="btn btn-outline"><span class="btn-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="3" x2="8" y2="21"/><line x1="12" y1="8" x2="17" y2="8"/><line x1="12" y1="12" x2="17" y2="12"/></svg></span>ノートに追加</button>
+        <button id="btnJobunRetry" class="btn btn-outline"><span class="btn-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg></span>もう1度</button>
+        <button id="btnJobunBookmark" class="btn btn-outline"><span class="btn-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span><span id="btnJobunBookmarkText">ブックマーク</span></button>
+      </div>
+      <div class="jobun-post-actions-primary">
+        <button id="btnJobunGoHome" class="btn btn-outline">ホームに戻る</button>
+        <button id="btnJobunNext" class="btn btn-primary">次の問題へ →</button>
+      </div>
     </div>
   </section>
 
   <!-- 条文トレ セッション結果画面 -->
   <section id="screen-jobun-result" class="screen">
-    <h2>お疲れさまでした</h2>
+    <h2 id="jobunResultHeading">お疲れさまでした</h2>
     <p class="score-big" id="jobunSessionScore">0 / 0</p>
     <p class="score-sub" id="jobunSessionScoreRate"></p>
     <div class="session-list" id="jobunSessionBreakdown"></div>
     <div class="home-actions">
-      <button id="btnJobunBackHome" class="btn btn-primary">条文トレホームに戻る</button>
+      <button id="btnJobunBackHome" class="btn btn-primary"><span id="btnJobunBackHomeText">ホームに戻る</span></button>
     </div>
   </section>
 
@@ -160,7 +260,16 @@
     <h2 id="noteEditHeading">ノートを作成</h2>
 
     <div id="noteLinkedQuestion" class="note-linked-question" hidden>
-      <button type="button" id="btnGoToLinkedQuestion" class="note-linked-question-btn"></button>
+      <button type="button" id="btnGoToLinkedQuestion" class="note-linked-question-btn">
+        <span class="btn-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l6-6"/><path d="M13 4h4a3 3 0 0 1 3 3v0a3 3 0 0 1-3 3h-2"/><path d="M11 20H7a3 3 0 0 1-3-3v0a3 3 0 0 1 3-3h2"/></svg></span>
+        <span id="btnGoToLinkedQuestionText"></span>
+      </button>
+    </div>
+    <div id="noteLinkedArticle" class="note-linked-question" hidden>
+      <button type="button" id="btnGoToLinkedArticle" class="note-linked-question-btn">
+        <span class="btn-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l6-6"/><path d="M13 4h4a3 3 0 0 1 3 3v0a3 3 0 0 1-3 3h-2"/><path d="M11 20H7a3 3 0 0 1-3-3v0a3 3 0 0 1 3-3h2"/></svg></span>
+        <span id="btnGoToLinkedArticleText"></span>
+      </button>
     </div>
 
     <label class="form-label" for="noteEditTitle">タイトル</label>
@@ -186,8 +295,8 @@
   <section id="screen-analysis" class="screen">
     <h2>分析</h2>
     <div class="mode-tabs mode-tabs-small" id="analysisModeTabs">
-      <button type="button" class="mode-tab" id="analysisTabTaku" data-mode="taku">📖 択一</button>
-      <button type="button" class="mode-tab" id="analysisTabJobun" data-mode="jobun">✏️ 条文</button>
+      <button type="button" class="mode-tab" id="analysisTabTaku" data-mode="taku">択一トレ</button>
+      <button type="button" class="mode-tab" id="analysisTabJobun" data-mode="jobun">条文トレ</button>
     </div>
 
     <!-- 択一の分析 -->
@@ -209,7 +318,7 @@
         <div class="chart-wrap chart-wrap-small"><canvas id="chartDaily"></canvas></div>
       </div>
 
-      <button id="btnWeakSubjects" type="button" class="btn btn-primary">🎯 苦手科目だけを集中出題</button>
+      <button id="btnWeakSubjects" type="button" class="btn btn-primary"><span class="btn-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.6" fill="currentColor" stroke="none"/></svg></span>苦手科目だけを集中出題</button>
 
       <div class="analysis-card">
         <p class="analysis-card-title">苦手問題ランキング</p>
@@ -219,6 +328,12 @@
 
     <!-- 条文トレの分析 -->
     <div id="analysisJobun" hidden>
+      <div class="analysis-card">
+        <p class="analysis-card-title">累計の学習進捗</p>
+        <p class="analysis-cumulative-percent"><span id="analysisCumulativePercent">0</span><span class="analysis-cumulative-percent-sign">%</span></p>
+        <p class="analysis-cumulative-fraction" id="analysisCumulativeFraction">まだ学習記録がありません</p>
+      </div>
+
       <div class="analysis-card">
         <p class="analysis-card-title">習熟度サマリー</p>
         <div class="stats-overall" id="jobunMasterySummary"></div>
@@ -234,6 +349,8 @@
         <div class="chart-wrap chart-wrap-small"><canvas id="chartJobunDaily"></canvas></div>
       </div>
 
+      <button id="btnJobunWeakSubjects" type="button" class="btn btn-primary"><span class="btn-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.6" fill="currentColor" stroke="none"/></svg></span>苦手法令だけを集中出題</button>
+
       <div class="analysis-card">
         <p class="analysis-card-title">苦手条文ランキング</p>
         <div id="jobunWeakRankingList" class="weak-ranking-list"></div>
@@ -245,7 +362,10 @@
   <section id="screen-search" class="screen">
     <h2>検索</h2>
     <div class="search-bar">
-      <input type="search" id="searchInput" class="search-input" placeholder="🔍 問題・条文・解説・ノートを検索" autocomplete="off">
+      <span class="search-bar-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </span>
+      <input type="search" id="searchInput" class="search-input" placeholder="問題・条文・解説・ノートを検索" autocomplete="off">
       <button id="btnSearchClear" class="search-clear-btn" hidden aria-label="検索をクリア">✕</button>
     </div>
 
@@ -270,13 +390,20 @@
   <!-- 設定画面 -->
   <section id="screen-settings" class="screen">
     <h2>設定</h2>
+
+    <div class="settings-section">
+      <label class="form-label" for="dailyGoalInput">1日の学習目標(問題数)</label>
+      <input type="number" id="dailyGoalInput" class="form-input" inputmode="numeric" min="1" max="500" step="1" value="10">
+      <p class="settings-desc">ホーム画面の「今日の学習」に、この目標に対する進捗を表示します(択一トレ・条文トレ共通)。</p>
+    </div>
+
     <div class="settings-section">
       <p class="settings-desc">
         学習履歴・ノートなど、このアプリのデータ(択一トレ・条文トレ両方)をまとめてバックアップ/復元できます。
         機種変更やブラウザのキャッシュ削除の前に、エクスポートしておくことをおすすめします。
       </p>
-      <button id="btnExportData" type="button" class="btn btn-outline">📤 データをエクスポート</button>
-      <label for="importFileInput" class="btn btn-outline file-btn">📥 データをインポート</label>
+      <button id="btnExportData" type="button" class="btn btn-outline"><span class="btn-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7 11 12 16 17 11"/><path d="M5 21h14"/></svg></span>データをエクスポート</button>
+      <label for="importFileInput" class="btn btn-outline file-btn"><span class="btn-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"/><polyline points="7 13 12 8 17 13"/><path d="M5 3h14"/></svg></span>データをインポート</label>
       <input type="file" id="importFileInput" accept="application/json" hidden>
     </div>
 
@@ -291,17 +418,30 @@
 
 <!-- 共通下部ナビゲーション -->
 <nav class="bottom-nav" id="bottomNav">
+  <button type="button" class="bottom-nav-btn" id="navHome" data-screen="screen-home">
+    <span class="bottom-nav-icon" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"/><path d="M9.5 20v-5.5h5V20"/></svg>
+    </span><span>ホーム</span>
+  </button>
   <button type="button" class="bottom-nav-btn" id="navNotes" data-screen="screen-notes">
-    <span class="bottom-nav-icon">📓</span><span>ノート</span>
+    <span class="bottom-nav-icon" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="3" x2="8" y2="21"/><line x1="12" y1="8" x2="17" y2="8"/><line x1="12" y1="12" x2="17" y2="12"/></svg>
+    </span><span>ノート</span>
   </button>
   <button type="button" class="bottom-nav-btn" id="navAnalysis" data-screen="screen-analysis">
-    <span class="bottom-nav-icon">📊</span><span>分析</span>
+    <span class="bottom-nav-icon" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="14"/></svg>
+    </span><span>分析</span>
   </button>
   <button type="button" class="bottom-nav-btn" id="navSearch" data-screen="screen-search">
-    <span class="bottom-nav-icon">🔍</span><span>検索</span>
+    <span class="bottom-nav-icon" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </span><span>検索</span>
   </button>
   <button type="button" class="bottom-nav-btn" id="navSettings" data-screen="screen-settings">
-    <span class="bottom-nav-icon">⚙️</span><span>設定</span>
+    <span class="bottom-nav-icon" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
+    </span><span>設定</span>
   </button>
 </nav>
 
@@ -309,18 +449,18 @@
 <div class="explanation-sheet" id="explanationSheet" hidden aria-hidden="true">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
-    <h3>📖 解説</h3>
+    <h3><span class="btn-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>解説</h3>
     <button id="btnCloseSheet" class="icon-btn sheet-close" aria-label="閉じる">✕</button>
   </div>
   <div class="sheet-body" id="explanationCard"></div>
   <div class="sheet-footer">
-    <button id="btnAddToNote" class="btn btn-outline">📝 この問題をノートに追加</button>
+    <button id="btnAddToNote" class="btn btn-outline"><span class="btn-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="3" x2="8" y2="21"/><line x1="12" y1="8" x2="17" y2="8"/><line x1="12" y1="12" x2="17" y2="12"/></svg></span>この問題をノートに追加</button>
     <button id="btnNextFromSheet" class="btn btn-primary">次の問題へ →</button>
   </div>
 </div>
 
 <div class="update-toast" id="updateToast" hidden role="status">
-  <span class="update-toast-text">🔄 新しいバージョンがあります</span>
+  <span class="update-toast-text"><span class="btn-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg></span>新しいバージョンがあります</span>
   <div class="update-toast-actions">
     <button id="btnUpdateNow" class="update-toast-btn">更新する</button>
     <button id="btnDismissUpdate" class="update-toast-dismiss" aria-label="閉じる">✕</button>
