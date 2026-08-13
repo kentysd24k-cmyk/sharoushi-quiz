@@ -21,6 +21,8 @@ const APP_STORAGE_KEYS = [
 const CHOICE_KEYS = ["A", "B", "C", "D", "E"];
 const SUBJECT_TAGS = ["労基", "安衛", "労災", "雇用", "徴収", "労一", "健保", "厚年", "国年", "社一"];
 const QUIZ_LIKE_SCREENS = new Set(["screen-quiz", "screen-jobun-quiz", "screen-note-edit"]);
+// 実際に問題を解いている最中の画面(ヘッダーに「中断」を出す対象)
+const ACTIVE_QUIZ_SCREENS = new Set(["screen-quiz", "screen-jobun-quiz"]);
 const GOAL_RING_RADIUS = 52;
 const GOAL_RING_CIRCUMFERENCE = 2 * Math.PI * GOAL_RING_RADIUS;
 
@@ -76,6 +78,7 @@ const state = {
   editingNote: null,
   articles: [],
   jobunListExpanded: new Set(), // 条文一覧で開いている法令名の集合
+  noteSheetDraft: null, // ノート追加シートの編集中データ { title, body, subjectTags, linkedQuestionId, linkedArticleId }
   // 条文トレセッション { list, index, label, results: [{id, correct}], returnScreen, completionLabel }
   jobunSession: null,
 };
@@ -640,7 +643,11 @@ function showScreen(id) {
   document.getElementById(id).classList.add("active");
   window.scrollTo(0, 0);
 
-  els.btnBack.hidden = id === "screen-home";
+  // 出題中は戻る矢印の代わりに「中断」を出す(どちらもヘッダー左端に置き、
+  // 出口が2つ並んで迷わないようにする)。
+  const isQuizScreen = ACTIVE_QUIZ_SCREENS.has(id);
+  els.btnAbort.hidden = !isQuizScreen;
+  els.btnBack.hidden = id === "screen-home" || isQuizScreen;
   els.bottomNav.hidden = QUIZ_LIKE_SCREENS.has(id);
   // ホーム画面はヒーロー内に独自のアプリ名表示があるため、常設ヘッダーは
   // 重複を避けて非表示にする。
@@ -866,6 +873,134 @@ function closeSheet() {
     els.explanationSheet.hidden = true;
     sheetHideTimeoutId = null;
   }, 280);
+}
+
+// ---------- トースト(保存完了などの通知) ----------
+
+let toastHideTimeoutId = null;
+
+function showToast(message) {
+  els.appToastText.textContent = message;
+  els.appToast.hidden = false;
+  if (toastHideTimeoutId) clearTimeout(toastHideTimeoutId);
+  requestAnimationFrame(() => els.appToast.classList.add("show"));
+  toastHideTimeoutId = setTimeout(() => {
+    els.appToast.classList.remove("show");
+    toastHideTimeoutId = setTimeout(() => {
+      els.appToast.hidden = true;
+      toastHideTimeoutId = null;
+    }, 250);
+  }, 2200);
+}
+
+// ---------- ノート追加シート ----------
+// 出題セッションを維持したままノートを保存するためのモーダル。
+// 以前はノート編集画面へ画面遷移していたため、セッションが破棄され
+// 「次の問題へ」で続きを解けなくなっていた。
+
+let noteSheetHideTimeoutId = null;
+
+function openNoteSheet(draft) {
+  state.noteSheetDraft = draft;
+  els.noteSheetTitle.value = draft.title;
+  els.noteSheetBody.value = draft.body;
+  renderNoteSheetSubjectTags();
+
+  if (noteSheetHideTimeoutId) {
+    clearTimeout(noteSheetHideTimeoutId);
+    noteSheetHideTimeoutId = null;
+  }
+  els.noteSheetBackdrop.hidden = false;
+  els.noteSheet.hidden = false;
+  els.noteSheet.setAttribute("aria-hidden", "false");
+  requestAnimationFrame(() => {
+    els.noteSheetBackdrop.classList.add("open");
+    els.noteSheet.classList.add("open");
+  });
+}
+
+function closeNoteSheet() {
+  els.noteSheetBackdrop.classList.remove("open");
+  els.noteSheet.classList.remove("open");
+  els.noteSheet.setAttribute("aria-hidden", "true");
+  if (noteSheetHideTimeoutId) clearTimeout(noteSheetHideTimeoutId);
+  noteSheetHideTimeoutId = setTimeout(() => {
+    els.noteSheetBackdrop.hidden = true;
+    els.noteSheet.hidden = true;
+    noteSheetHideTimeoutId = null;
+  }, 280);
+  state.noteSheetDraft = null;
+}
+
+function renderNoteSheetSubjectTags() {
+  els.noteSheetSubjectTags.innerHTML = "";
+  for (const tag of SUBJECT_TAGS) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className =
+      "tag-chip" + (state.noteSheetDraft.subjectTags.includes(tag) ? " active" : "");
+    chip.textContent = tag;
+    chip.addEventListener("click", () => {
+      const tags = state.noteSheetDraft.subjectTags;
+      const i = tags.indexOf(tag);
+      if (i === -1) tags.push(tag);
+      else tags.splice(i, 1);
+      renderNoteSheetSubjectTags();
+    });
+    els.noteSheetSubjectTags.appendChild(chip);
+  }
+}
+
+function saveNoteFromSheet() {
+  const draft = state.noteSheetDraft;
+  if (!draft) return;
+  upsertNote({
+    id: genNoteId(),
+    title: els.noteSheetTitle.value.trim() || "無題のノート",
+    body: els.noteSheetBody.value,
+    subjectTags: draft.subjectTags.slice(),
+    freeTags: [],
+    linkedQuestionId: draft.linkedQuestionId || null,
+    linkedArticleId: draft.linkedArticleId || null,
+  });
+  closeNoteSheet();
+  showToast("ノートに保存しました");
+}
+
+function openNoteSheetFromQuestion(q) {
+  openNoteSheet({
+    title: `${q.year} ${shortSubjectName(q.subject)} 第${q.question_number}問のメモ`,
+    body: buildQuoteFromQuestion(q) + "\n\n【自分のコメント】\n",
+    subjectTags: tagsForSubject(q.subject),
+    linkedQuestionId: q.id,
+    linkedArticleId: null,
+  });
+}
+
+function openNoteSheetFromArticle(entry) {
+  openNoteSheet({
+    title: `${entry.law} ${entry.article}のメモ`,
+    body: buildQuoteFromArticle(entry) + "\n\n【自分のコメント】\n",
+    subjectTags: entry.subject ? [entry.subject] : [],
+    linkedQuestionId: null,
+    linkedArticleId: entry.id,
+  });
+}
+
+// ---------- 出題の中断 ----------
+// 解答結果は1問ごとにlocalStorageへ記録済みのため、中断してもそこまでの
+// 学習記録(正誤履歴・日次解答数)は保持される。破棄されるのは進行中の
+// セッション(残りの出題リスト)だけ。
+
+function abortCurrentSession() {
+  const current = document.querySelector(".screen.active");
+  const id = current ? current.id : "";
+  if (id === "screen-quiz") state.session = null;
+  else if (id === "screen-jobun-quiz") state.jobunSession = null;
+  closeNoteSheet();
+  closeSheet();
+  applyMode();
+  showScreen("screen-home");
 }
 
 const ICON_BOOK =
@@ -1457,34 +1592,6 @@ function openNoteEditor(noteId) {
   showScreen("screen-note-edit");
 }
 
-function openNoteEditorFromQuestion(q) {
-  state.editingNote = {
-    id: null,
-    title: `${q.year} ${shortSubjectName(q.subject)} 第${q.question_number}問のメモ`,
-    body: buildQuoteFromQuestion(q) + "\n\n【自分のコメント】\n",
-    subjectTags: tagsForSubject(q.subject),
-    freeTags: [],
-    linkedQuestionId: q.id,
-    linkedArticleId: null,
-  };
-  renderNoteEditor();
-  showScreen("screen-note-edit");
-}
-
-function openNoteEditorFromArticle(entry) {
-  state.editingNote = {
-    id: null,
-    title: `${entry.law} ${entry.article}のメモ`,
-    body: buildQuoteFromArticle(entry) + "\n\n【自分のコメント】\n",
-    subjectTags: entry.subject ? [entry.subject] : [],
-    freeTags: [],
-    linkedQuestionId: null,
-    linkedArticleId: entry.id,
-  };
-  renderNoteEditor();
-  showScreen("screen-note-edit");
-}
-
 function saveCurrentNote() {
   const note = state.editingNote;
   note.title = els.noteEditTitle.value.trim() || "無題のノート";
@@ -1842,6 +1949,7 @@ function cacheEls() {
   const ids = [
     "appHeader",
     "btnBack",
+    "btnAbort",
     "headerTitle",
     "bottomNav",
     "navHome",
@@ -1963,6 +2071,16 @@ function cacheEls() {
     "importFileInput",
     "btnResetHistory",
     "btnResetJobunHistory",
+    "noteSheetBackdrop",
+    "noteSheet",
+    "btnCloseNoteSheet",
+    "noteSheetTitle",
+    "noteSheetSubjectTags",
+    "noteSheetBody",
+    "btnCancelNoteSheet",
+    "btnSaveNoteSheet",
+    "appToast",
+    "appToastText",
     "updateToast",
     "btnUpdateNow",
     "btnDismissUpdate",
@@ -1980,6 +2098,14 @@ function bindEvents() {
     }
     showScreen("screen-home");
   });
+
+  els.btnAbort.addEventListener("click", abortCurrentSession);
+
+  // ノート追加シート
+  els.btnSaveNoteSheet.addEventListener("click", saveNoteFromSheet);
+  els.btnCancelNoteSheet.addEventListener("click", closeNoteSheet);
+  els.btnCloseNoteSheet.addEventListener("click", closeNoteSheet);
+  els.noteSheetBackdrop.addEventListener("click", closeNoteSheet);
 
   // モード切替
   els.modeTabTaku.addEventListener("click", () => switchMode("taku"));
@@ -2046,13 +2172,12 @@ function bindEvents() {
   els.btnShowExplanation.addEventListener("click", openSheet);
   els.btnCloseSheet.addEventListener("click", closeSheet);
   els.sheetBackdrop.addEventListener("click", closeSheet);
+  // 解説シートは開いたままノート追加シートを重ねる。画面遷移しないため
+  // 出題セッションが維持され、保存後はそのまま「次の問題へ」で続けられる。
   els.btnAddToNote.addEventListener("click", () => {
     const q = currentQuestion();
     if (!q) return;
-    // 説明シート(オーバーレイ)を閉じてから遷移しないと、シートが
-    // ノート編集画面の上に残ったままになり操作をブロックしてしまう。
-    closeSheet();
-    openNoteEditorFromQuestion(q);
+    openNoteSheetFromQuestion(q);
   });
   els.btnBackHome.addEventListener("click", () => {
     state.session = null;
@@ -2075,7 +2200,7 @@ function bindEvents() {
 
   // 条文トレ 出題
   els.btnJobunDontKnow.addEventListener("click", jobunDontKnow);
-  els.btnJobunAddToNote.addEventListener("click", () => openNoteEditorFromArticle(jobunCurrentQuestion()));
+  els.btnJobunAddToNote.addEventListener("click", () => openNoteSheetFromArticle(jobunCurrentQuestion()));
   els.btnJobunRetry.addEventListener("click", renderJobunQuestion);
   els.btnJobunBookmark.addEventListener("click", () => {
     const entry = jobunCurrentQuestion();
