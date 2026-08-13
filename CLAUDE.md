@@ -1,19 +1,40 @@
 # sharoushi-quiz
 
-社労士試験 択一式過去問クイズ(PWA)。「📖 択一トレ」(過去問クイズ)と「✏️ 条文トレ」(条文穴埋め)の2モード構成。`index.html` / `style.css` / `app.js` / `manifest.json` / `vendor/chart.umd.min.js` / `questions.json` / `articles.json` / `icons/*` を Service Worker (`sw.js`) でキャッシュし、オフラインでも動作する。
+社労士試験 択一式過去問クイズ(PWA)。「📖 択一トレ」(過去問クイズ)と「✏️ 条文トレ」(条文穴埋め)の2モード構成。`index.html` / `style.vNN.css` / `app.vNN.js` / `manifest.json` / `vendor/chart.umd.min.js` / `questions.json` / `articles.json` / `icons/*` を Service Worker (`sw.js`) でキャッシュし、オフラインでも動作する。
+
+## CSS/JS のファイル名バージョン方式【最重要】
+
+**CSS と JS は、ファイル名にバージョンを埋め込んで配置する**(`style.v20.css` / `app.v20.js`)。素の `style.css` / `app.js` という名前のファイルは存在しない。
+
+リリース時に更新するのは必ず次の**4箇所すべて**で、1つでも欠けると壊れる。
+
+1. 実ファイル名(`git mv app.v20.js app.v21.js` / `git mv style.v20.css style.v21.css`)
+2. `index.html` の `<link rel="stylesheet" href="./style.v21.css">`
+3. `index.html` の `<script src="./app.v21.js"></script>`
+4. `sw.js` の `CACHE_VERSION` と `APP_SHELL` 内の2つのファイル名
+
+### なぜこの方式か(実際に起きた事故)
+
+`index.html` は network-first、CSS/JS は cache-first で配信される。ファイル名が固定(`app.js`)だと、**HTMLだけ新しくなり、CSS/JSは古いキャッシュのまま**という不整合な組み合わせが端末に配信されうる。実際にこれが起き、次の症状が出た。
+
+- 円グラフが黒く塗りつぶされる(新CSSの `fill:none` が無いためSVGのデフォルト描画になる)
+- ボタンが未装飾のグレーのピル状になる(`.home-cta` / `.home-feature-card` が旧CSSに無い)
+- 下部ナビの「ホーム」タブだけ無反応になる(旧`app.js`に `navHome` のバインドが無く、さらに旧`applyMode()`が新HTMLに存在しない `#modeHomeTaku` を参照して `TypeError` で停止する)
+
+この状態は `CACHE_VERSION` を上げても、新しいSWが有効化されるまでは解消しない。**ファイル名にバージョンを埋め込めば、新しいHTMLは必ずそのHTMLと対になるCSS/JSだけを指す**ため、この不整合が原理的に発生しなくなる。旧バージョンのファイルは `activate` 時の旧キャッシュ削除で自然に消える。
 
 ## Service Worker のキャッシュ戦略【重要】
 
 `sw.js` の配信戦略はリソースによって異なる。
 
 - **network-first**(オンライン時は常に最新を取得し、オフライン時のみキャッシュにフォールバック): `questions.json`(択一トレの問題データ)、`articles.json`(条文トレの穴埋めデータ)、ナビゲーションリクエスト(`index.html` = PWAの入口)
-- **cache-first**: それ以外の `APP_SHELL`(`style.css` / `app.js` / `manifest.json` / `vendor/chart.umd.min.js` / `icons/*`)
+- **cache-first**: それ以外の `APP_SHELL`(`style.vNN.css` / `app.vNN.js` / `manifest.json` / `vendor/chart.umd.min.js` / `icons/*`)
 
 `questions.json`・`articles.json` と `index.html` が network-first なのは、iOSホーム画面PWAが古いキャッシュに固定されて起動不能になる事故を防ぐため(詳細はコミット履歴参照)。これらは容量やコンテンツ更新頻度に関わらず install 時のプリキャッシュ対象からも除外している。cache.addAll() は1ファイルでも失敗すると全体が失敗し、大容量ファイルのフェッチ失敗がSWのインストールごと失敗させる主因になっていた。
 
 ブラウザは **`sw.js` 自体のバイト列が変わったときだけ** 新しいService Workerの更新を検知する。
 
-**そのため、cache-first で配信されるファイル(`style.css` / `app.js` / `manifest.json` / `vendor/` 配下 / `icons/` 配下)のいずれかを1文字でも変更したら、`sw.js` の `CACHE_VERSION` を必ずインクリメントすること。**(`questions.json` / `articles.json` と `index.html` は network-first のため理論上は不要だが、更新トースト通知([`app.js`](app.js)の`watchForServiceWorkerUpdate`)を確実に発火させるため、アプリファイルを変更した際は慣習として毎回上げてよい。)
+**そのため、cache-first で配信されるファイル(`style.vNN.css` / `app.vNN.js` / `manifest.json` / `vendor/` 配下 / `icons/` 配下)のいずれかを1文字でも変更したら、`sw.js` の `CACHE_VERSION` を必ずインクリメントすること。**(`questions.json` / `articles.json` と `index.html` は network-first のため理論上は不要だが、更新トースト通知(`app.vNN.js`の`watchForServiceWorkerUpdate`)を確実に発火させるため、アプリファイルを変更した際は慣習として毎回上げてよい。)
 
 `CACHE_VERSION` を上げ忘れると、cache-first対象ファイルについては `sw.js` のバイト列が変化しないため更新が一切検知されず、ユーザーには古いキャッシュが無期限に配信され続ける。
 
@@ -21,7 +42,7 @@
 
 ```js
 // sw.js
-const CACHE_VERSION = "v13"; // ← ファイルを変更したらここをインクリメント
+const CACHE_VERSION = "v20"; // ← ファイルを変更したらここをインクリメント(ファイル名も同時に)
 ```
 
 ## データの保存先(localStorage)【重要】
@@ -32,7 +53,7 @@ const CACHE_VERSION = "v13"; // ← ファイルを変更したらここをイ�
 - 条文トレ: `srquiz_jobun_history_v1`(正誤履歴)、`srquiz_jobun_daily_v1`(日次解答数)、`srquiz_jobun_bookmarks_v1`(ブックマーク)
 - 共通: `srquiz_notes_v1`(ノート)、`srquiz_mode_v1`(最後に使ったモード)
 
-エクスポート/インポート(設定画面)は `app.js` の `APP_STORAGE_KEYS` に列挙されたキーをすべて対象にする。新しい localStorage キーを追加したら、この配列にも必ず追記すること。
+エクスポート/インポート(設定画面)は `app.vNN.js` の `APP_STORAGE_KEYS` に列挙されたキーをすべて対象にする。新しい localStorage キーを追加したら、この配列にも必ず追記すること。
 
 ## vendor/ について
 

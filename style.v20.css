@@ -56,6 +56,8 @@ button {
 }
 
 /* ---------- Header ---------- */
+/* ヘッダーは半透明にせず、濃いティール背景+白文字で常にはっきり読めるようにする
+   (半透明+blurだと背景に溶けてタイトル・戻るボタンが判読しづらかったため)。 */
 .app-header {
   position: sticky;
   top: 0;
@@ -65,27 +67,25 @@ button {
   gap: 8px;
   padding: 10px 14px;
   padding-top: max(10px, env(safe-area-inset-top));
-  background: rgba(240, 253, 250, 0.88);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: var(--teal-900);
-  box-shadow: 0 1px 0 rgba(13, 148, 136, 0.1);
+  background: linear-gradient(135deg, var(--teal-700), var(--teal-600));
+  color: white;
+  box-shadow: var(--shadow);
 }
 
 .app-header h1 {
   flex: 1;
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   margin: 0;
   font-weight: 700;
   letter-spacing: 0.01em;
-  color: var(--teal-900);
+  color: white;
   text-align: center;
 }
 
 .icon-btn {
-  background: var(--teal-100);
+  background: rgba(255, 255, 255, 0.18);
   border: none;
-  color: var(--teal-700);
+  color: white;
   width: 36px;
   height: 36px;
   border-radius: 10px;
@@ -96,7 +96,7 @@ button {
   cursor: pointer;
 }
 
-.icon-btn:active { background: var(--teal-500); color: white; }
+.icon-btn:active { background: rgba(255, 255, 255, 0.34); }
 
 /* ---------- Layout ---------- */
 #app {

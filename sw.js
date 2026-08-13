@@ -1,18 +1,24 @@
 "use strict";
 
-// index.html / style.css / app.js / manifest.json / questions.json / icons/* の
+// index.html / style.*.css / app.*.js / manifest.json / questions.json / icons/* の
 // いずれかを変更したら、このバージョンを必ず上げること。
 // sw.js自体のバイト列が変わらないとブラウザは更新を検知せず、
 // 古いキャッシュが無期限に配信され続けてしまう。
-const CACHE_VERSION = "v19";
+//
+// 【重要】CSS/JSはファイル名にバージョンを埋め込む(style.vNN.css / app.vNN.js)。
+// CACHE_VERSION を上げるときは、実ファイル名・index.html の参照・下の APP_SHELL の
+// 3箇所を必ず同時に更新すること。これにより network-first の index.html は常に
+// 「そのHTMLと対になるCSS/JS」だけを指すことになり、新HTML+旧JSという不整合な
+// 組み合わせが配信される事故(ホーム画面が崩れ、ナビが無反応になる)を原理的に防ぐ。
+const CACHE_VERSION = "v20";
 const CACHE_NAME = `srquiz-cache-${CACHE_VERSION}`;
 // questions.json / articles.json はここに含めない。network-first で実行時にキャッシュされるため、
 // install時の事前キャッシュ対象から外し、install失敗の主因(大容量フェッチの失敗)を排除する。
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./style.css",
-  "./app.js",
+  "./style.v20.css",
+  "./app.v20.js",
   "./manifest.json",
   "./vendor/chart.umd.min.js",
   "./icons/icon-192.png",
