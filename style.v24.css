@@ -75,19 +75,31 @@ button {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 60;
+  /* コンテンツ側が合成レイヤーに昇格しても必ず上に来るよう、z-index は
+     ボトムナビ(50)より十分高くし、シート(90/100)より低い値にする。 */
+  z-index: 80;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
+  /* セーフエリア分も含めてヘッダー自身が塗るため、ステータスバー裏も同色になる */
   padding-top: max(10px, env(safe-area-inset-top));
-  /* background-color を単独で先に指定しておくことで、グラデーション(background-image)が
-     何らかの理由で描画されなかった場合でも必ず濃いティールの下地が残り、
-     白文字が背景に溶けることがないようにする。 */
+  /* 透明度は一切持たせない。単色を background-color で先に敷き、
+     グラデーションが描画されない場合でも濃いティールの下地が必ず残るようにする。 */
   background-color: #0f766e;
   background-image: linear-gradient(135deg, var(--teal-700), var(--teal-600));
   color: #ffffff;
+  opacity: 1;
   box-shadow: var(--shadow);
+  /* ヘッダー自身も合成レイヤーに固定する。iOS Safari では fixed 要素が
+     スクロール中に再描画されず、背後のコンテンツが透けて見える不具合があり、
+     レイヤーを明示的に確保することで回避できる。 */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  will-change: transform;
+  isolation: isolate;
 }
 
 .app-header h1 {
@@ -104,10 +116,13 @@ button {
 }
 
 .icon-btn {
-  background: rgba(255, 255, 255, 0.22);
+  /* ヘッダー上のボタン。半透明だと背後のコンテンツが透けて見える誤解を与えるため、
+     ティールの単色(ヘッダーより明るい色)で塗る。 */
+  background: var(--teal-500);
   border: none;
   color: #ffffff;
   -webkit-text-fill-color: #ffffff;
+  opacity: 1;
   width: 36px;
   height: 36px;
   border-radius: 10px;
@@ -118,7 +133,7 @@ button {
   cursor: pointer;
 }
 
-.icon-btn:active { background: rgba(255, 255, 255, 0.38); }
+.icon-btn:active { background: var(--teal-300); color: var(--teal-900); -webkit-text-fill-color: var(--teal-900); }
 
 /* 出題中に切り上げてホームに戻るための導線。解答済みの結果は都度localStorageに
    保存されているため、中断してもそこまでの学習記録は失われない。 */
@@ -129,10 +144,12 @@ button {
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.92);
+  /* 透明度を持たせない(背後のヘッダー色が透けないよう完全な白にする) */
+  background: #ffffff;
   border: none;
   color: var(--teal-800);
   -webkit-text-fill-color: var(--teal-800);
+  opacity: 1;
   height: 34px;
   padding: 0 14px;
   border-radius: 999px;
@@ -167,9 +184,12 @@ html {
 .screen { display: none; }
 .screen.active { display: block; animation: fadeIn .18s ease; }
 
+/* transform を使うと画面コンテンツが合成レイヤーに昇格し、iOS Safari で
+   position: fixed のヘッダーより上に描画されることがある(ヘッダーが透けて
+   見える原因になっていた)。フェードは opacity だけで行う。 */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .lead {
@@ -893,12 +913,17 @@ h2 {
   color: var(--teal-900);
 }
 
+/* シート内の閉じるボタンは明るい下地の上に置くため、.icon-btn の白文字指定
+   (-webkit-text-fill-color 含む)を打ち消して濃い色に戻す。 */
 .sheet-close {
   background: var(--teal-50);
   color: var(--ink-soft);
+  -webkit-text-fill-color: var(--ink-soft);
   width: 32px;
   height: 32px;
 }
+
+.sheet-close:active { background: var(--teal-100); color: var(--ink-soft); -webkit-text-fill-color: var(--ink-soft); }
 
 .sheet-body {
   flex: 1;

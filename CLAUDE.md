@@ -4,13 +4,13 @@
 
 ## CSS/JS のファイル名バージョン方式【最重要】
 
-**CSS と JS は、ファイル名にバージョンを埋め込んで配置する**(`style.v23.css` / `app.v23.js`)。素の `style.css` / `app.js` という名前のファイルは存在しない。
+**CSS と JS は、ファイル名にバージョンを埋め込んで配置する**(`style.v24.css` / `app.v24.js`)。素の `style.css` / `app.js` という名前のファイルは存在しない。
 
 リリース時に更新するのは必ず次の**4箇所すべて**で、1つでも欠けると壊れる。
 
-1. 実ファイル名(`git mv app.v23.js app.v24.js` / `git mv style.v23.css style.v24.css`)
-2. `index.html` の `<link rel="stylesheet" href="./style.v24.css">`
-3. `index.html` の `<script src="./app.v24.js"></script>`
+1. 実ファイル名(`git mv app.v24.js app.v25.js` / `git mv style.v24.css style.v25.css`)
+2. `index.html` の `<link rel="stylesheet" href="./style.v25.css">`
+3. `index.html` の `<script src="./app.v25.js"></script>`
 4. `sw.js` の `CACHE_VERSION` と `APP_SHELL` 内の2つのファイル名
 
 ### なぜこの方式か(実際に起きた事故)
@@ -42,7 +42,7 @@
 
 ```js
 // sw.js
-const CACHE_VERSION = "v23"; // ← ファイルを変更したらここをインクリメント(ファイル名も同時に)
+const CACHE_VERSION = "v24"; // ← ファイルを変更したらここをインクリメント(ファイル名も同時に)
 ```
 
 ## データの保存先(localStorage)【重要】
