@@ -10,15 +10,15 @@
 // 3箇所を必ず同時に更新すること。これにより network-first の index.html は常に
 // 「そのHTMLと対になるCSS/JS」だけを指すことになり、新HTML+旧JSという不整合な
 // 組み合わせが配信される事故(ホーム画面が崩れ、ナビが無反応になる)を原理的に防ぐ。
-const CACHE_VERSION = "v21";
+const CACHE_VERSION = "v22";
 const CACHE_NAME = `srquiz-cache-${CACHE_VERSION}`;
 // questions.json / articles.json はここに含めない。network-first で実行時にキャッシュされるため、
 // install時の事前キャッシュ対象から外し、install失敗の主因(大容量フェッチの失敗)を排除する。
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./style.v21.css",
-  "./app.v21.js",
+  "./style.v22.css",
+  "./app.v22.js",
   "./manifest.json",
   "./vendor/chart.umd.min.js",
   "./icons/icon-192.png",

@@ -696,6 +696,38 @@ function renderHomeGoal() {
   els.homeGoalMessage.textContent = achieved ? "今日の目標を達成しました" : `あと${goal - todayCount}問`;
   els.homeGoalMessage.classList.toggle("complete", achieved);
   els.homeStreakValue.textContent = String(computeStreakDaysFor(daily));
+
+  // 累計正答率は、直近の解答結果(lastResult)ベースで集計する。
+  // 未学習のうちは分母が0になるため「—」を表示する。
+  const acc = state.mode === "jobun" ? jobunOverallAccuracy() : takuOverallAccuracy();
+  els.homeAccuracyValue.textContent =
+    acc.attempted > 0 ? `${Math.round((acc.correct / acc.attempted) * 100)}%` : "—";
+}
+
+function takuOverallAccuracy() {
+  const history = loadHistory();
+  let attempted = 0;
+  let correct = 0;
+  for (const q of state.questions) {
+    const e = history[String(q.id)];
+    if (!e) continue;
+    attempted += 1;
+    if (e.lastResult === "correct") correct += 1;
+  }
+  return { attempted, correct };
+}
+
+function jobunOverallAccuracy() {
+  const history = loadJobunHistory();
+  let attempted = 0;
+  let correct = 0;
+  for (const a of state.articles) {
+    const e = history[a.id];
+    if (!e) continue;
+    attempted += 1;
+    if (e.lastResult === "correct") correct += 1;
+  }
+  return { attempted, correct };
 }
 
 function applyMode() {
@@ -1965,6 +1997,7 @@ function cacheEls() {
     "homeTodayGoal",
     "homeStreakValue",
     "homeGoalMessage",
+    "homeAccuracyValue",
     "btnHomeRandom",
     "btnSubjectSelect",
     "btnRandomAllText",

@@ -51,8 +51,12 @@ body {
   flex-direction: column;
 }
 
+/* color を明示しないと、ブラウザ既定の buttontext 色が使われる。
+   iOS Safari ではこれがシステムブルーになり、選択肢の本文が青く表示されて
+   読みづらくなっていた。文字色も本文から継承させる。 */
 button {
   font-family: inherit;
+  color: inherit;
 }
 
 /* ---------- Header ---------- */
@@ -67,8 +71,12 @@ button {
   gap: 8px;
   padding: 10px 14px;
   padding-top: max(10px, env(safe-area-inset-top));
-  background: linear-gradient(135deg, var(--teal-700), var(--teal-600));
-  color: white;
+  /* background-color を単独で先に指定しておくことで、グラデーション(background-image)が
+     何らかの理由で描画されなかった場合でも必ず濃いティールの下地が残り、
+     白文字が背景に溶けることがないようにする。 */
+  background-color: #0f766e;
+  background-image: linear-gradient(135deg, var(--teal-700), var(--teal-600));
+  color: #ffffff;
   box-shadow: var(--shadow);
 }
 
@@ -78,14 +86,18 @@ button {
   margin: 0;
   font-weight: 700;
   letter-spacing: 0.01em;
-  color: white;
+  color: #ffffff;
+  /* iOS Safari が -webkit-text-fill-color を継承して文字色を上書きすることがあるため、
+     color と同じ値を明示して確実に白で塗る。 */
+  -webkit-text-fill-color: #ffffff;
   text-align: center;
 }
 
 .icon-btn {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.22);
   border: none;
-  color: white;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
   width: 36px;
   height: 36px;
   border-radius: 10px;
@@ -96,27 +108,31 @@ button {
   cursor: pointer;
 }
 
-.icon-btn:active { background: rgba(255, 255, 255, 0.34); }
+.icon-btn:active { background: rgba(255, 255, 255, 0.38); }
 
 /* 出題中に切り上げてホームに戻るための導線。解答済みの結果は都度localStorageに
    保存されているため、中断してもそこまでの学習記録は失われない。 */
+/* 中断は出題から抜ける唯一の導線なので、半透明に頼らず白の枠線+不透明度高めの
+   下地で、濃いティール上でもはっきり浮くようにする。 */
 .header-abort-btn {
   display: flex;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.92);
   border: none;
-  color: white;
-  height: 36px;
-  padding: 0 12px;
+  color: var(--teal-800);
+  -webkit-text-fill-color: var(--teal-800);
+  height: 34px;
+  padding: 0 14px;
   border-radius: 999px;
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
+  box-shadow: 0 1px 3px rgba(15, 61, 62, 0.25);
 }
 
-.header-abort-btn:active { background: rgba(255, 255, 255, 0.34); }
+.header-abort-btn:active { background: #ffffff; transform: scale(0.97); }
 
 /* ---------- Layout ---------- */
 #app {
@@ -391,7 +407,7 @@ h2 {
   margin: -44px 0 16px;
   background: var(--card-bg);
   border-radius: 22px;
-  padding: 16px 18px 14px;
+  padding: 14px 18px;
   box-shadow: 0 16px 32px rgba(15, 61, 62, 0.16);
 }
 
@@ -490,6 +506,29 @@ h2 {
 }
 
 .home-hero-goal-message.complete { color: var(--teal-700); }
+
+/* リング右側の余白が目立っていたため、累計正答率を1行足してバランスを取る。 */
+.home-hero-accuracy {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.home-hero-accuracy-label {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.home-hero-accuracy-value {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--teal-700);
+}
 
 /* ---------- ホーム: メインCTA ---------- */
 .home-cta {
