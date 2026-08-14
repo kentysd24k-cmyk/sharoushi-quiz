@@ -21,6 +21,9 @@
 
   --radius: 14px;
   --shadow: 0 2px 10px rgba(13, 148, 136, 0.12);
+
+  /* 固定ヘッダーの高さ: 上下パディング10px + 中身36px + セーフエリア */
+  --header-h: calc(env(safe-area-inset-top, 0px) + 56px);
 }
 
 * { box-sizing: border-box; }
@@ -62,10 +65,17 @@ button {
 /* ---------- Header ---------- */
 /* ヘッダーは半透明にせず、濃いティール背景+白文字で常にはっきり読めるようにする
    (半透明+blurだと背景に溶けてタイトル・戻るボタンが判読しづらかったため)。 */
+/* position: sticky は、body が flex コンテナの場合に iOS Safari で効かず、
+   スクロールするとヘッダーが流れて消えてしまう既知の不具合がある。
+   ブラウザ差を持ち込まないよう fixed で確実に固定する。
+   fixed は文書フローから外れるので、代わりに body.has-header で #app に
+   ヘッダー高さ分の上余白を確保する(ヘッダーを隠すホーム画面では付けない)。 */
 .app-header {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 10;
+  left: 0;
+  right: 0;
+  z-index: 60;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -141,6 +151,17 @@ button {
   max-width: 560px;
   margin: 0 auto;
   padding: 16px 16px 96px;
+}
+
+/* ヘッダーを表示している画面だけ、固定ヘッダーに隠れないよう上余白を足す。
+   ホーム画面はヘッダーを隠してヒーローを画面上端まで見せるため対象外。 */
+body.has-header #app {
+  padding-top: calc(var(--header-h) + 16px);
+}
+
+/* 固定ヘッダーの下に要素が潜り込まないよう、スクロール目標位置も下げる */
+html {
+  scroll-padding-top: var(--header-h);
 }
 
 .screen { display: none; }

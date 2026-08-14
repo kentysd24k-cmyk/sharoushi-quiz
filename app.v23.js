@@ -652,6 +652,9 @@ function showScreen(id) {
   // ホーム画面はヒーロー内に独自のアプリ名表示があるため、常設ヘッダーは
   // 重複を避けて非表示にする。
   els.appHeader.hidden = id === "screen-home";
+  // ヘッダーは position: fixed でフローから外れているため、表示している画面では
+  // body に has-header を付けて #app 側で高さ分の上余白を確保する。
+  document.body.classList.toggle("has-header", !els.appHeader.hidden);
   els.bottomNav.querySelectorAll(".bottom-nav-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.screen === id);
   });
