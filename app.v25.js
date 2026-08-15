@@ -643,18 +643,13 @@ function showScreen(id) {
   document.getElementById(id).classList.add("active");
   window.scrollTo(0, 0);
 
-  // 出題中は戻る矢印の代わりに「中断」を出す(どちらもヘッダー左端に置き、
-  // 出口が2つ並んで迷わないようにする)。
-  const isQuizScreen = ACTIVE_QUIZ_SCREENS.has(id);
-  els.btnAbort.hidden = !isQuizScreen;
-  els.btnBack.hidden = id === "screen-home" || isQuizScreen;
+  // 出題中の離脱は画面内の「中断」ボタン(進捗バーの行/解答後のボタン群)で行うため、
+  // ヘッダーの戻る矢印は出さない(出口が2つ並んで迷わないようにする)。
+  els.btnBack.hidden = id === "screen-home" || ACTIVE_QUIZ_SCREENS.has(id);
   els.bottomNav.hidden = QUIZ_LIKE_SCREENS.has(id);
   // ホーム画面はヒーロー内に独自のアプリ名表示があるため、常設ヘッダーは
   // 重複を避けて非表示にする。
   els.appHeader.hidden = id === "screen-home";
-  // ヘッダーは position: fixed でフローから外れているため、表示している画面では
-  // body に has-header を付けて #app 側で高さ分の上余白を確保する。
-  document.body.classList.toggle("has-header", !els.appHeader.hidden);
   els.bottomNav.querySelectorAll(".bottom-nav-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.screen === id);
   });
@@ -1984,7 +1979,9 @@ function cacheEls() {
   const ids = [
     "appHeader",
     "btnBack",
-    "btnAbort",
+    "btnAbortQuiz",
+    "btnAbortJobunQuiz",
+    "btnAbortAfterAnswer",
     "headerTitle",
     "bottomNav",
     "navHome",
@@ -2135,7 +2132,9 @@ function bindEvents() {
     showScreen("screen-home");
   });
 
-  els.btnAbort.addEventListener("click", abortCurrentSession);
+  els.btnAbortQuiz.addEventListener("click", abortCurrentSession);
+  els.btnAbortJobunQuiz.addEventListener("click", abortCurrentSession);
+  els.btnAbortAfterAnswer.addEventListener("click", abortCurrentSession);
 
   // ノート追加シート
   els.btnSaveNoteSheet.addEventListener("click", saveNoteFromSheet);

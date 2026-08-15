@@ -13,16 +13,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="社労士クイズ">
-<link rel="stylesheet" href="./style.v24.css">
+<link rel="stylesheet" href="./style.v25.css">
 </head>
 <body>
 
 <header class="app-header" id="appHeader">
   <button id="btnBack" class="icon-btn" hidden aria-label="戻る">←</button>
-  <button id="btnAbort" class="header-abort-btn" hidden>
-    <span class="btn-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
-    中断
-  </button>
   <h1 id="headerTitle">社労士 過去問クイズ</h1>
 </header>
 
@@ -166,6 +162,10 @@
   <!-- 択一クイズ画面 -->
   <section id="screen-quiz" class="screen">
     <div class="quiz-topbar">
+      <button id="btnAbortQuiz" type="button" class="quiz-abort-btn">
+        <span class="btn-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+        中断
+      </button>
       <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
       <span class="progress-text" id="progressText">1 / 10</span>
     </div>
@@ -183,8 +183,13 @@
     </div>
 
     <div class="post-answer-actions" id="postAnswerActions" hidden>
-      <button id="btnShowExplanation" class="btn btn-outline"><span class="btn-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>解説を見る</button>
-      <button id="btnNext" class="btn btn-primary">次の問題へ →</button>
+      <div class="post-answer-actions-secondary">
+        <button id="btnShowExplanation" class="btn btn-outline"><span class="btn-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>解説を見る</button>
+      </div>
+      <div class="post-answer-actions-primary">
+        <button id="btnAbortAfterAnswer" class="btn btn-outline">中断してホームへ</button>
+        <button id="btnNext" class="btn btn-primary">次の問題へ →</button>
+      </div>
     </div>
   </section>
 
@@ -209,6 +214,10 @@
   <!-- 条文トレ出題画面 -->
   <section id="screen-jobun-quiz" class="screen">
     <div class="quiz-topbar">
+      <button id="btnAbortJobunQuiz" type="button" class="quiz-abort-btn">
+        <span class="btn-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+        中断
+      </button>
       <div class="progress-track"><div class="progress-bar" id="jobunProgressBar"></div></div>
       <span class="progress-text" id="jobunProgressText">1 / 10</span>
     </div>
@@ -506,6 +515,6 @@
 </div>
 
 <script src="./vendor/chart.umd.min.js"></script>
-<script src="./app.v24.js"></script>
+<script src="./app.v25.js"></script>
 </body>
 </html>

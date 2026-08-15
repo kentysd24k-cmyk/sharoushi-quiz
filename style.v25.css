@@ -21,9 +21,6 @@
 
   --radius: 14px;
   --shadow: 0 2px 10px rgba(13, 148, 136, 0.12);
-
-  /* 固定ヘッダーの高さ: 上下パディング10px + 中身36px + セーフエリア */
-  --header-h: calc(env(safe-area-inset-top, 0px) + 56px);
 }
 
 * { box-sizing: border-box; }
@@ -70,14 +67,18 @@ button {
    ブラウザ差を持ち込まないよう fixed で確実に固定する。
    fixed は文書フローから外れるので、代わりに body.has-header で #app に
    ヘッダー高さ分の上余白を確保する(ヘッダーを隠すホーム画面では付けない)。 */
+/* 【重要】ヘッダーは固定しない(通常フローのままスクロールで流れる)。
+   iOS WebKit は position: fixed/sticky の要素で描画が破綻しやすく、
+   ・背後のコンテンツが透けて見える(合成レイヤーの描画順の問題)
+   ・文字がぼやける(合成レイヤーが低解像度でラスタライズされる)
+   といった不具合が実機で継続的に発生した。ホーム画面のヒーロー(通常フロー)は
+   同じ色・同じ文字でも常に鮮明に表示されていたため、固定をやめて
+   ホームと同じ「通常フローの帯」に揃える。
+   translateZ(0) / will-change / backface-visibility によるレイヤー昇格も、
+   ぼやけの原因になるため使わない。 */
 .app-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  /* コンテンツ側が合成レイヤーに昇格しても必ず上に来るよう、z-index は
-     ボトムナビ(50)より十分高くし、シート(90/100)より低い値にする。 */
-  z-index: 80;
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -91,15 +92,6 @@ button {
   color: #ffffff;
   opacity: 1;
   box-shadow: var(--shadow);
-  /* ヘッダー自身も合成レイヤーに固定する。iOS Safari では fixed 要素が
-     スクロール中に再描画されず、背後のコンテンツが透けて見える不具合があり、
-     レイヤーを明示的に確保することで回避できる。 */
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  will-change: transform;
-  isolation: isolate;
 }
 
 .app-header h1 {
@@ -136,30 +128,25 @@ button {
 .icon-btn:active { background: var(--teal-300); color: var(--teal-900); -webkit-text-fill-color: var(--teal-900); }
 
 /* 出題中に切り上げてホームに戻るための導線。解答済みの結果は都度localStorageに
-   保存されているため、中断してもそこまでの学習記録は失われない。 */
-/* 中断は出題から抜ける唯一の導線なので、半透明に頼らず白の枠線+不透明度高めの
-   下地で、濃いティール上でもはっきり浮くようにする。 */
-.header-abort-btn {
+   保存されているため、中断してもそこまでの学習記録は失われない。
+   ヘッダーを固定しない方針にしたため、ヘッダー内ではなく出題画面の
+   進捗バーの行(通常フロー)に置く。 */
+.quiz-abort-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   flex-shrink: 0;
-  /* 透明度を持たせない(背後のヘッダー色が透けないよう完全な白にする) */
-  background: #ffffff;
-  border: none;
-  color: var(--teal-800);
-  -webkit-text-fill-color: var(--teal-800);
-  opacity: 1;
-  height: 34px;
-  padding: 0 14px;
+  background: var(--card-bg);
+  border: 1.5px solid var(--teal-500);
+  color: var(--teal-700);
+  padding: 6px 12px;
   border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 800;
+  font-size: 0.78rem;
+  font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(15, 61, 62, 0.25);
 }
 
-.header-abort-btn:active { background: #ffffff; transform: scale(0.97); }
+.quiz-abort-btn:active { background: var(--teal-50); transform: scale(0.97); }
 
 /* ---------- Layout ---------- */
 #app {
@@ -170,16 +157,8 @@ button {
   padding: 16px 16px 96px;
 }
 
-/* ヘッダーを表示している画面だけ、固定ヘッダーに隠れないよう上余白を足す。
-   ホーム画面はヘッダーを隠してヒーローを画面上端まで見せるため対象外。 */
-body.has-header #app {
-  padding-top: calc(var(--header-h) + 16px);
-}
-
-/* 固定ヘッダーの下に要素が潜り込まないよう、スクロール目標位置も下げる */
-html {
-  scroll-padding-top: var(--header-h);
-}
+/* ヘッダーは通常フローに戻したため、コンテンツ側の上余白補正は不要
+   (固定していた頃は body.has-header で高さ分を確保していた)。 */
 
 .screen { display: none; }
 .screen.active { display: block; animation: fadeIn .18s ease; }
@@ -830,17 +809,35 @@ h2 {
 }
 
 /* ---------- Post-answer actions ---------- */
+/* 条文トレの出題後アクションと同じ2段構成に揃える
+   (上段=補助操作、下段=中断/次へ) */
 .post-answer-actions {
   display: flex;
+  flex-direction: column;
   gap: 10px;
   margin-top: 16px;
 }
 
+.post-answer-actions-secondary,
+.post-answer-actions-primary {
+  display: grid;
+  gap: 10px;
+}
+
+.post-answer-actions-primary {
+  grid-template-columns: 1fr 1fr;
+}
+
 .post-answer-actions .btn {
-  flex: 1;
   margin-bottom: 0;
   font-size: 0.88rem;
   padding: 13px 8px;
+}
+
+.post-answer-actions-primary .btn {
+  font-size: 0.95rem;
+  padding: 15px 6px;
+  font-weight: 800;
 }
 
 /* ---------- Explanation sheet ---------- */
