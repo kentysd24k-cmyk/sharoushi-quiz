@@ -647,9 +647,11 @@ function showScreen(id) {
   // ヘッダーの戻る矢印は出さない(出口が2つ並んで迷わないようにする)。
   els.btnBack.hidden = id === "screen-home" || ACTIVE_QUIZ_SCREENS.has(id);
   els.bottomNav.hidden = QUIZ_LIKE_SCREENS.has(id);
-  // ホーム画面はヒーロー内に独自のアプリ名表示があるため、常設ヘッダーは
-  // 重複を避けて非表示にする。
-  els.appHeader.hidden = id === "screen-home";
+  // ヘッダーはホームを含む全画面で表示する。以前はホームだけ非表示にして
+  // ヒーロー内にアプリ名を出していたが、ヒーローは負のマージンとセーフエリアに
+  // 依存して上端を塗るため、実機(iOS PWA)で塗りが届かず、明るい帯の上に
+  // 白文字が乗ってタイトルが消える事故が起きた。不透明な単色ヘッダーに一本化する。
+  els.appHeader.hidden = false;
   els.bottomNav.querySelectorAll(".bottom-nav-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.screen === id);
   });

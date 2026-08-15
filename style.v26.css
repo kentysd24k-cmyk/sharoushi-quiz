@@ -331,12 +331,18 @@ h2 {
 .home-actions { margin-top: 18px; }
 
 /* ---------- ホーム: ヒーロー帯 ---------- */
+/* ヘッダーを全画面で表示するようにしたため、ヒーローはセーフエリアを
+   自前で塗る必要がなくなった(以前はここで env(safe-area-inset-top) 分を
+   確保していたが、実機で塗りが上端まで届かずタイトルが消えていた)。
+   単色の background-color も敷き、グラデーションが描画されない場合でも
+   必ず濃いティールの下地が残るようにする。 */
 .home-hero {
   position: relative;
   overflow: hidden;
   margin: -16px -16px 0;
-  padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 56px;
-  background: linear-gradient(135deg, var(--teal-700), var(--teal-500));
+  padding: 16px 16px 56px;
+  background-color: #0f766e;
+  background-image: linear-gradient(135deg, var(--teal-700), var(--teal-500));
   border-radius: 0 0 28px 28px;
 }
 
@@ -369,17 +375,6 @@ h2 {
   height: 150px;
   bottom: -90px;
   left: -50px;
-}
-
-.home-hero-appname {
-  position: relative;
-  z-index: 1;
-  margin: 6px 0 0;
-  color: white;
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  text-align: center;
 }
 
 /* ---------- ホーム: モード切替タブ(ヒーロー内) ---------- */
