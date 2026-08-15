@@ -11,9 +11,14 @@
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- black-translucent にすると、iOS PWAでは Web コンテンツがステータスバーの下まで
+     広がり、上端に OS 側の減衰(白く薄れるグラデーション)がかかる。この帯に乗った
+     文字は色や不透明度に関わらず判読できないほど薄くなり、ヘッダーのタイトルが
+     消える原因になっていた。black を指定してコンテンツをステータスバーの下に
+     潜り込ませない。 -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="社労士クイズ">
-<link rel="stylesheet" href="./style.v26.css">
+<link rel="stylesheet" href="./style.v27.css">
 </head>
 <body>
 
@@ -514,6 +519,6 @@
 </div>
 
 <script src="./vendor/chart.umd.min.js"></script>
-<script src="./app.v26.js"></script>
+<script src="./app.v27.js"></script>
 </body>
 </html>

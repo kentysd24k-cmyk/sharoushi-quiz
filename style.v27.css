@@ -33,6 +33,8 @@ html {
      ブラウザ側のスクロール処理(フォーカス移動・自動テスト等)が要素を
      下部ナビの真下(=クリック不能な位置)まで寄せてしまうことがある。 */
   scroll-padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  /* sticky ヘッダーの下に要素が潜り込まないよう、スクロール目標位置も下げる */
+  scroll-padding-top: calc(64px + env(safe-area-inset-top));
 }
 
 html, body {
@@ -45,10 +47,10 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* body を flex コンテナにしない。position: sticky は親が flex コンテナだと
+   iOS Safari で効かない既知の不具合があり、ヘッダーの固定が外れる原因になる。 */
 body {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
 /* color を明示しないと、ブラウザ既定の buttontext 色が使われる。
@@ -67,18 +69,18 @@ button {
    ブラウザ差を持ち込まないよう fixed で確実に固定する。
    fixed は文書フローから外れるので、代わりに body.has-header で #app に
    ヘッダー高さ分の上余白を確保する(ヘッダーを隠すホーム画面では付けない)。 */
-/* 【重要】ヘッダーは固定しない(通常フローのままスクロールで流れる)。
-   iOS WebKit は position: fixed/sticky の要素で描画が破綻しやすく、
-   ・背後のコンテンツが透けて見える(合成レイヤーの描画順の問題)
-   ・文字がぼやける(合成レイヤーが低解像度でラスタライズされる)
-   といった不具合が実機で継続的に発生した。ホーム画面のヒーロー(通常フロー)は
-   同じ色・同じ文字でも常に鮮明に表示されていたため、固定をやめて
-   ホームと同じ「通常フローの帯」に揃える。
-   translateZ(0) / will-change / backface-visibility によるレイヤー昇格も、
-   ぼやけの原因になるため使わない。 */
+/* スクロール中も常にタイトルが見えるよう sticky で上端に固定する。
+   これまでヘッダーの文字が薄れて読めなかった原因は position 指定ではなく、
+   black-translucent によりコンテンツがステータスバー下まで広がり、
+   OS 側の上端減衰(白く薄れるグラデーション)がかかっていたこと。
+   index.html 側で status-bar-style を black に変更して解消済み。
+   translateZ(0) / will-change によるレイヤー昇格は、iOS で低解像度
+   ラスタライズを招き文字がぼやける原因になるため使わない。 */
 .app-header {
-  position: relative;
-  z-index: 1;
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 60;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -150,7 +152,6 @@ button {
 
 /* ---------- Layout ---------- */
 #app {
-  flex: 1;
   width: 100%;
   max-width: 560px;
   margin: 0 auto;
